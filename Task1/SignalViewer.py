@@ -14,8 +14,8 @@ from PyQt5.QtGui import QIcon , QFont, QPixmap # Package to set an icon , fonts 
 from PyQt5.QtCore import Qt , QTimer  # used for alignments.
 from PyQt5.QtWidgets import QLayout , QVBoxLayout , QHBoxLayout, QGridLayout ,QWidget, QFileDialog, QPushButton
 import pyqtgraph as pg
-from SignalGlue import SignalGlue_MainWindow
-
+from qt3 import SignalGlue_MainWindow
+from functions_graph import zoom_in, zoom_out, show_graph, hide_graph, increase_speed, decrease_speed, start_simulation, stop_simulation, rewind, change_color
 
 class Ui_MainWindow(QMainWindow):
 
@@ -25,11 +25,64 @@ class Ui_MainWindow(QMainWindow):
     graph_1_files= []
     graph_2_files=[]
     all_signals=[]
+
+    def setup_buttons_connections(self):
+        # Button connections for Graph 1
+        self.zoom_in_graph1.clicked.connect(lambda: zoom_in(self.graph1))
+        self.zoom_out_graph1.clicked.connect(lambda: zoom_out(self.graph1))
+        self.show_graph_1.clicked.connect(lambda: show_graph(self.graph1))
+        self.hide_graph_1.clicked.connect(lambda: hide_graph(self.graph1))
+        self.high_speed_1.clicked.connect(lambda: increase_speed(self.timer_graph_1))
+        self.slow_speed_1.clicked.connect(lambda: decrease_speed(self.timer_graph_1))
+        self.start_graph_1.clicked.connect(lambda: start_simulation(self.timer_graph_1))
+        self.stop_graph_1.clicked.connect(lambda: stop_simulation(self.timer_graph_1))
+        self.rewind_graph1.clicked.connect(lambda: rewind(self.timer_graph_1, self.time_index_graph_1, self.graph1))
+        self.Change_color_1.clicked.connect(lambda: change_color(self.graph1))
+
+        # Button connections for Graph 2
+        self.zoom_in_graph2.clicked.connect(lambda: zoom_in(self.graph2))
+        self.zoom_out_graph2.clicked.connect(lambda: zoom_out(self.graph2))
+        self.show_graph_2.clicked.connect(lambda: show_graph(self.graph2))
+        self.hide_graph_2.clicked.connect(lambda: hide_graph(self.graph2))
+        self.high_speed_2.clicked.connect(lambda: increase_speed(self.timer_graph_2))
+        self.slow_speed_2.clicked.connect(lambda: decrease_speed(self.timer_graph_2))
+        self.start_graph_2.clicked.connect(lambda: start_simulation(self.timer_graph_2))
+        self.stop_graph_2.clicked.connect(lambda: stop_simulation(self.timer_graph_2))
+        self.rewind_graph2.clicked.connect(lambda: rewind(self.timer_graph_2, self.time_index_graph_2, self.graph2))
+        self.Change_color_2.clicked.connect(lambda: change_color(self.graph2))
+
+        self.change_to_graph_1.clicked.connect(self.move_to_graph_2_to_1)
+        self.change_to_graph_2.clicked.connect(self.move_to_graph_1_to_2)
+
+    #moving_graphs
+    def move_to_graph_1_to_2(self):
+
+        if self.num_of_files > 0:
+            self.graph_2_files.append(self.graph_1_files.pop())
+            self.num_of_files -= 1
+            self.graph1.clear()
+            self.graph2.clear()
+            self.drawGraph(self.graph1, self.graph_1_files)
+            self.drawGraph(self.graph2, self.graph_2_files)
+        else:
+            print("No Signals to Move")
+
+    def move_to_graph_2_to_1(self):
+        if self.num_of_files > 0:
+            self.graph_1_files.append(self.graph_2_files.pop())
+            self.num_of_files -= 1
+            self.graph1.clear()
+            self.graph2.clear()
+            self.drawGraph(self.graph1, self.graph_1_files)
+            self.drawGraph(self.graph2, self.graph_2_files)
+        else:
+            print("No Signals to Move")
     
 
     # Constructing the Main Window.
     def __init__(self):
         super().__init__()
+        
         self.setWindowTitle("Multi Channel Signal Viewer")
         self.resize(1290, 909)
         self.setStyleSheet("Background-color:#F0F0F0;")
@@ -527,6 +580,8 @@ class Ui_MainWindow(QMainWindow):
         self.coordinates = self.menubar.addMenu('Bla Bla Coordinates')
 
         QtCore.QMetaObject.connectSlotsByName(self)
+
+        self.setup_buttons_connections()
 
 
     def toggleLinkedSignals(self):
