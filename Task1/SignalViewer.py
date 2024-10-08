@@ -26,30 +26,31 @@ class Ui_MainWindow(QMainWindow):
     graph_2_files=[]
     all_signals=[]
 
+
     def setup_buttons_connections(self):
         # Button connections for Graph 1
-        self.zoom_in_graph1.clicked.connect(lambda: zoom_in(self.graph1))
-        self.zoom_out_graph1.clicked.connect(lambda: zoom_out(self.graph1))
-        self.show_graph_1.clicked.connect(lambda: show_graph(self.graph1))
-        self.hide_graph_1.clicked.connect(lambda: hide_graph(self.graph1))
-        self.high_speed_1.clicked.connect(lambda: increase_speed(self.timer_graph_1))
-        self.slow_speed_1.clicked.connect(lambda: decrease_speed(self.timer_graph_1))
-        self.start_graph_1.clicked.connect(lambda: start_simulation(self.timer_graph_1))
-        self.stop_graph_1.clicked.connect(lambda: stop_simulation(self.timer_graph_1))
-        self.rewind_graph1.clicked.connect(lambda: rewind(self.timer_graph_1, self.time_index_graph_1, self.graph1))
-        self.Change_color_1.clicked.connect(lambda: change_color(self.graph1))
+        self.zoom_in_graph1.clicked.connect(lambda: zoom_in(self, self.linkedSignals, 1))
+        self.zoom_out_graph1.clicked.connect(lambda: zoom_out(self, self.linkedSignals, 1))
+        self.show_graph_1.clicked.connect(lambda: show_graph(self, self.linkedSignals, 1))
+        self.hide_graph_1.clicked.connect(lambda: hide_graph(self, self.linkedSignals, 1))
+        self.high_speed_1.clicked.connect(lambda: increase_speed(self, self.linkedSignals, 1))
+        self.slow_speed_1.clicked.connect(lambda: decrease_speed(self, self.linkedSignals, 1))
+        self.start_graph_1.clicked.connect(lambda: start_simulation(self, self.linkedSignals, 1))
+        self.stop_graph_1.clicked.connect(lambda: stop_simulation(self, self.linkedSignals, 1))
+        self.rewind_graph1.clicked.connect(lambda: rewind(self, self.linkedSignals , 1))
+        self.Change_color_1.clicked.connect(lambda: change_color(self, self.linkedSignals, 1))
 
         # Button connections for Graph 2
-        self.zoom_in_graph2.clicked.connect(lambda: zoom_in(self.graph2))
-        self.zoom_out_graph2.clicked.connect(lambda: zoom_out(self.graph2))
-        self.show_graph_2.clicked.connect(lambda: show_graph(self.graph2))
-        self.hide_graph_2.clicked.connect(lambda: hide_graph(self.graph2))
-        self.high_speed_2.clicked.connect(lambda: increase_speed(self.timer_graph_2))
-        self.slow_speed_2.clicked.connect(lambda: decrease_speed(self.timer_graph_2))
-        self.start_graph_2.clicked.connect(lambda: start_simulation(self.timer_graph_2))
-        self.stop_graph_2.clicked.connect(lambda: stop_simulation(self.timer_graph_2))
-        self.rewind_graph2.clicked.connect(lambda: rewind(self.timer_graph_2, self.time_index_graph_2, self.graph2))
-        self.Change_color_2.clicked.connect(lambda: change_color(self.graph2))
+        self.zoom_in_graph2.clicked.connect(lambda: zoom_in(self, self.linkedSignals, 2))
+        self.zoom_out_graph2.clicked.connect(lambda: zoom_out(self, self.linkedSignals, 2))
+        self.show_graph_2.clicked.connect(lambda: show_graph(self, self.linkedSignals, 2))
+        self.hide_graph_2.clicked.connect(lambda: hide_graph(self, self.linkedSignals, 2))
+        self.high_speed_2.clicked.connect(lambda: increase_speed(self, self.linkedSignals, 2))
+        self.slow_speed_2.clicked.connect(lambda: decrease_speed(self, self.linkedSignals, 2))
+        self.start_graph_2.clicked.connect(lambda: start_simulation(self, self.linkedSignals, 2))
+        self.stop_graph_2.clicked.connect(lambda: stop_simulation(self, self.linkedSignals, 2))
+        self.rewind_graph2.clicked.connect(lambda: rewind(self, self.linkedSignals, 2))
+        self.Change_color_2.clicked.connect(lambda: change_color(self, self.linkedSignals, 2))
 
         self.change_to_graph_1.clicked.connect(self.move_to_graph_2_to_1)
         self.change_to_graph_2.clicked.connect(self.move_to_graph_1_to_2)
@@ -96,6 +97,11 @@ class Ui_MainWindow(QMainWindow):
         
         self.timer_linked_graphs = QTimer(self) # Used primarly for cine mode
         self.time_index_linked_graphs = 0 # For Cine Mode Scrolling
+        
+        self.graph1_color = "r"
+        self.graph2_color = "b"
+        self.linked_graphs_color= "y"
+
         self.setupUiElements()
         self.windowSize= 70
     
@@ -126,7 +132,12 @@ class Ui_MainWindow(QMainWindow):
         self.graph_1_H_slider.setGeometry(QtCore.QRect(60, 310, 871, 22))
         self.graph_1_H_slider.setOrientation(QtCore.Qt.Horizontal)
         self.graph_1_H_slider.setObjectName("graph_1_H_slider")
-        
+        self.graph_1_H_slider.setMinimum(0)
+        self.graph_1_H_slider.setMaximum(5000)  # Placeholder; will update based on the signal length
+        self.graph_1_H_slider.setValue(0)
+        self.graph_1_H_slider.setTickInterval(1)
+
+
         #-- Graph 1 Vertical Slider --#
         self.graph_1_V_slider = QSlider(self.Graph1_Section)
         self.graph_1_V_slider.setGeometry(QtCore.QRect(940, 30, 22, 271))
@@ -513,7 +524,7 @@ class Ui_MainWindow(QMainWindow):
         self.slow_speed_2.setStyleSheet("font-weight:bold;font-size:16px;background-color:white")
         self.slow_speed_2.setObjectName("slow_speed_2")
         
-        self.stop_graph_2 = QtWidgets.QPushButton("Stop",self.Graph2_Section)
+        self.stop_graph_2 = QtWidgets.QPushButton("Pause",self.Graph2_Section)
         self.stop_graph_2.setGeometry(QtCore.QRect(150, 350, 91, 41))
         self.stop_graph_2.setStyleSheet("font-weight:bold;font-size:16px;background-color:white")
         self.stop_graph_2.setObjectName("stop_graph_2")
@@ -650,7 +661,7 @@ class Ui_MainWindow(QMainWindow):
             self.timer_graph_1.stop()
             self.timer_graph_2.stop()
             self.time_index_linked_graphs=0
-            self.timer_linked_graphs.timeout.connect(lambda: self.slide_through_data(Graph,signalData))
+            self.timer_linked_graphs.timeout.connect(lambda: self.slide_through_data(Graph,signalData,3))
             self.timer_linked_graphs.start(200)
         else:
             if GraphNum == 1:
@@ -670,7 +681,7 @@ class Ui_MainWindow(QMainWindow):
         # Plot the signal at this time index.
         if self.linkedSignals:
             Graph.clear()
-            Graph.plot(signalData[:self.time_index_linked_graphs + 1,1])
+            Graph.plot(signalData[:self.time_index_linked_graphs + 1,1], pen=f'{self.linked_graphs_color}')
             if self.time_index_linked_graphs > self.windowSize:
                 Graph.setXRange(self.time_index_linked_graphs - self.windowSize + 1, self.time_index_linked_graphs + 1)
             else:
@@ -682,7 +693,7 @@ class Ui_MainWindow(QMainWindow):
         
         else:
             if GraphNum == 1:
-                Graph.plot(signalData[:self.time_index_graph_1 + 1,1] , pen='r')
+                Graph.plot(signalData[:self.time_index_graph_1 + 1,1] , pen=f'{self.graph1_color}')
                 if self.time_index_graph_1 > self.windowSize:
                     Graph.setXRange(self.time_index_graph_1 - self.windowSize + 1, self.time_index_graph_1 + 1)
                 else:
@@ -692,7 +703,7 @@ class Ui_MainWindow(QMainWindow):
                 if self.time_index_graph_1 > len(signalData):
                     self.timer_graph_1.stop()
             else:
-                Graph.plot(signalData[:self.time_index_graph_2 + 1,1] , pen='b')
+                Graph.plot(signalData[:self.time_index_graph_2 + 1,1] , pen=f'{self.graph2_color}')
                 if self.time_index_graph_2 > self.windowSize:
                     Graph.setXRange(self.time_index_graph_2 - self.windowSize + 1, self.time_index_graph_2 + 1)
                 else:
