@@ -1,5 +1,3 @@
-
-
 import sys
 import numpy as np
 from PyQt5 import QtCore, QtGui, QtWidgets

@@ -14,6 +14,7 @@ from PyQt5.QtCore import Qt , QTimer  # used for alignments.
 from PyQt5.QtWidgets import QLayout , QVBoxLayout , QHBoxLayout, QGridLayout ,QWidget, QFileDialog, QPushButton
 import pyqtgraph as pg
 from fetchApiData import FetchApi_MainWindow
+from GlueMenu import Ui_GlueMenu
 from functions_graph import zoom_in, zoom_out, show_graph, hide_graph, increase_speed, decrease_speed, start_simulation, stop_simulation, rewind, change_color
 
 class Ui_MainWindow(QMainWindow):
@@ -128,6 +129,10 @@ class Ui_MainWindow(QMainWindow):
     def apiData(self):
         self.apiData = FetchApi_MainWindow()
         self.apiData.show()
+    def glueSignals(self):
+        self.signalGlue = Ui_GlueMenu()
+        self.signalGlue.show()
+    
 
     def setupUiElements(self):
         
@@ -604,6 +609,7 @@ class Ui_MainWindow(QMainWindow):
 
         self.actionSignal_Glue = QtWidgets.QAction("Signal Glue",self)
         self.actionSignal_Glue.setObjectName("Signal Glue")
+        self.actionSignal_Glue.triggered.connect(self.glueSignals)
 
         self.menuOptions.addAction(self.actionApiData)
         self.menuOptions.addAction(self.actionLink_Signals)
