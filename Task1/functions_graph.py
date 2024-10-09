@@ -49,16 +49,15 @@ def decrease_speed(UI_MainWindow, isLinked, graphNum):
 def start_simulation(UI_MainWindow, isLinked, graphNum):
     if isLinked:
         if not UI_MainWindow.timer_linked_graphs.isActive():
-            print("Link Timer Not Active")
             UI_MainWindow.timer_linked_graphs.start()
+            UI_MainWindow.timer_graph_1.start()
+            UI_MainWindow.timer_graph_2.start()
     else:
         if graphNum == 1:
             if not UI_MainWindow.timer_graph_1.isActive():
-                print("Graph 1 Timer Not Active")
                 UI_MainWindow.timer_graph_1.start()
         else:
             if not UI_MainWindow.timer_graph_2.isActive():
-                print("Graph 2 Timer Not Active")
                 UI_MainWindow.timer_graph_2.start()
 
 

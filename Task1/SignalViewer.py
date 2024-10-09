@@ -3,7 +3,6 @@
 #                                   #
 #            Team 16                #
 #                                   #
-#                                   #
 #####################################
 
 import sys
@@ -14,7 +13,7 @@ from PyQt5.QtGui import QIcon , QFont, QPixmap # Package to set an icon , fonts 
 from PyQt5.QtCore import Qt , QTimer  # used for alignments.
 from PyQt5.QtWidgets import QLayout , QVBoxLayout , QHBoxLayout, QGridLayout ,QWidget, QFileDialog, QPushButton
 import pyqtgraph as pg
-from SignalGlue import SignalGlue_MainWindow
+from fetchApiData import FetchApi_MainWindow
 from functions_graph import zoom_in, zoom_out, show_graph, hide_graph, increase_speed, decrease_speed, start_simulation, stop_simulation, rewind, change_color
 
 class Ui_MainWindow(QMainWindow):
@@ -57,27 +56,48 @@ class Ui_MainWindow(QMainWindow):
 
     #moving_graphs
     def move_to_graph_1_to_2(self):
+        if len(self.graph_1_files) > 0:
+            # Move the last signal from graph 1 to graph 2
+            self.graph_2_files.append(self.graph_1_files.pop())  # Move file from graph 1 to graph 2
 
-        if self.num_of_files > 0:
-            self.graph_2_files.append(self.graph_1_files.pop())
-            self.num_of_files -= 1
-            self.graph1.clear()
-            self.graph2.clear()
-            self.drawGraph(self.graph1, self.graph_1_files)
-            self.drawGraph(self.graph2, self.graph_2_files)
+            self.timer_graph_1.stop()  # Stop timer for graph 1
+            self.graph1.clear()  # Clear graph 1
+            self.graph2.clear()  # Clear graph 2
+
+            # Plot new data for graph 1 if available
+            if len(self.graph_1_files) > 0:
+                graph1Data = self.loadSignalData(self.graph_1_files[-1])  # Load new data for graph 1
+                self.signalPlotting(self.graph1, graph1Data, 1)  # Plot the new data on graph 1
+
+            # Load and plot data for graph 2 (the one just moved)
+            if len(self.graph_2_files) > 0:
+                graph2Data = self.loadSignalData(self.graph_2_files[-1])  # Load data for graph 2
+                self.signalPlotting(self.graph2, graph2Data, 2)  # Plot the data on graph 2
         else:
             print("No Signals to Move")
+
 
     def move_to_graph_2_to_1(self):
-        if self.num_of_files > 0:
-            self.graph_1_files.append(self.graph_2_files.pop())
-            self.num_of_files -= 1
-            self.graph1.clear()
-            self.graph2.clear()
-            self.drawGraph(self.graph1, self.graph_1_files)
-            self.drawGraph(self.graph2, self.graph_2_files)
+        if len(self.graph_2_files) > 0:
+            # Move the last signal from graph 2 to graph 1
+            self.graph_1_files.append(self.graph_2_files.pop())  # Move file from graph 2 to graph 1
+
+            self.timer_graph_2.stop()  # Stop timer for graph 2
+            self.graph1.clear()  # Clear graph 1
+            self.graph2.clear()  # Clear graph 2
+
+            # Plot new data for graph 2 if available
+            if len(self.graph_2_files) > 0:
+                graph2Data = self.loadSignalData(self.graph_2_files[-1])  # Load new data for graph 2
+                self.signalPlotting(self.graph2, graph2Data, 2)  # Plot the new data on graph 2
+
+            # Load and plot data for graph 1 (the one just moved)
+            if len(self.graph_1_files) > 0:
+                graph1Data = self.loadSignalData(self.graph_1_files[-1])  # Load data for graph 1
+                self.signalPlotting(self.graph1, graph1Data, 1)  # Plot the data on graph 1
         else:
             print("No Signals to Move")
+
     
 
     # Constructing the Main Window.
@@ -105,10 +125,9 @@ class Ui_MainWindow(QMainWindow):
         self.setupUiElements()
         self.windowSize= 70
     
-    def glueSignals(self):
-        self.signalGlue = SignalGlue_MainWindow()
-        self.signalGlue.show()
-        self.signalGlue.signalsPlotting(self.all_signals)
+    def apiData(self):
+        self.apiData = FetchApi_MainWindow()
+        self.apiData.show()
 
     def setupUiElements(self):
         
@@ -575,15 +594,18 @@ class Ui_MainWindow(QMainWindow):
         self.menuOptions.setObjectName("Signal Options")
         self.setMenuBar(self.menubar)
 
-        
+        self.actionApiData = QtWidgets.QAction("API Data",self)
+        self.actionApiData.setObjectName("API Data")
+        self.actionApiData.triggered.connect(self.apiData)
+
         self.actionLink_Signals = QtWidgets.QAction("Link Signals",self)
         self.actionLink_Signals.setObjectName("Link Signals")
         self.actionLink_Signals.triggered.connect(self.toggleLinkedSignals)
 
         self.actionSignal_Glue = QtWidgets.QAction("Signal Glue",self)
         self.actionSignal_Glue.setObjectName("Signal Glue")
-        self.actionSignal_Glue.triggered.connect(self.glueSignals)
 
+        self.menuOptions.addAction(self.actionApiData)
         self.menuOptions.addAction(self.actionLink_Signals)
         self.menuOptions.addAction(self.actionSignal_Glue)
         self.menubar.addAction(self.menuOptions.menuAction())
@@ -596,47 +618,61 @@ class Ui_MainWindow(QMainWindow):
 
 
     def toggleLinkedSignals(self):
-        self.linkedSignals = not self.linkedSignals
+        if not self.linkedSignals:
+            self.linkedSignals = True
+            self.graph1.clear()
+            self.graph2.clear()
+        else:
+            self.linkedSignals = False
+            self.timer_linked_graphs.stop()
+            self.graph1.clear()
+            self.graph2.clear()
 
     def openSignalFile(self, Graph, graphNum):
+        signalData = ""
         options = QFileDialog.Options()
-        # file_path -> Directory , _ -> the filteration (dummy)
         file_path, _ = QFileDialog.getOpenFileName(self, "Open Signal File", "", "File Extension (*.csv *.dat)", options=options)
         
-        if file_path:  # if user chooses a file
+        if file_path: 
             try:
-                # Load the Data from the file
-                signalData = self.loadSignalData(file_path)
+                if graphNum == 1:
+                    print(f"The Length of list ={len(self.graph_1_files)}")
+                    
+                    self.graph_1_files = [file_path]  # Replace the old file with the new one
+                    self.timer_graph_1.stop()
+                    self.graph1.clear()  # Clear the graph
+                    signalData = self.loadSignalData(self.graph_1_files[0])
+                    self.signalPlotting(self.graph1, signalData, 1)  # Plot the new data on graph 1
 
-                # Ensure signalData is exist.
+                else:
+                    print(f"The Length of list ={len(self.graph_2_files)}")
+                    
+                    self.graph_2_files = [file_path]  # Replace the old file with the new one
+                    self.timer_graph_2.stop()
+                    self.graph2.clear()  # Clear the graph
+                    signalData = self.loadSignalData(self.graph_2_files[0])
+                    self.signalPlotting(self.graph2, signalData, 2)  # Plot the new data on graph 2
+
                 if signalData is None:
                     print("No valid signal data found.")
                     return
-                
-                if graphNum == 1:
-                    self.graph_1_files.append(file_path)
-                else:
-                    self.graph_2_files.append(file_path)
-
-                self.all_signals.append(file_path)
-                print(self.all_signals)
-                # Plot the data with cine mode
-                self.signalPlotting(Graph, signalData, graphNum) 
 
             except Exception as e:
                 print(f"Couldn't open signal file: {str(e)}")
+
+
 
     def loadSignalData(self, file_path):
         try:
             # Load the Signal file.
             signalData = np.loadtxt(file_path, delimiter=',')
             
-            # Check if any data was actually loaded
+            # Check if any data was  loaded
             if signalData is None or signalData.size == 0:
                 print(f"File at {file_path} contains no data.")
                 return None
             
-            # If the data is 1D, reshape it to 2D (for graph plotting)
+            # If the data is 1D, convert it to 2D (for graph plotting)
             if signalData.ndim == 1:
                 signalData = signalData[:, np.newaxis]
             
@@ -652,76 +688,76 @@ class Ui_MainWindow(QMainWindow):
             return None
 
     
-    # My Methodology in cine mode i will plot the whole dataset and i will slide through to make the effect of dynamic mode.
-    def signalPlotting(self, Graph, signalData,GraphNum):
-        Graph.clear()
+    def signalPlotting(self, Graph, signalData, GraphNum):
+        Graph.clear()  
 
-        # Start timer and update signal plotting
-        if self.linkedSignals :
+        if self.linkedSignals:
             self.timer_graph_1.stop()
             self.timer_graph_2.stop()
-            self.time_index_linked_graphs=0
-            self.timer_linked_graphs.timeout.connect(lambda: self.slide_through_data(Graph,signalData,3))
+            
+            self.time_index_linked_graphs = 0  
+            self.timer_linked_graphs.timeout.connect(lambda: self.slide_through_data(Graph, signalData, 3))
             self.timer_linked_graphs.start(200)
         else:
             if GraphNum == 1:
-                self.time_index_graph_1=0
-                self.timer_graph_1.timeout.connect(lambda: self.slide_through_data(Graph,signalData, GraphNum))
-                self.timer_graph_1.start(200)
+                self.timer_graph_1.stop()
+                self.time_index_graph_1 = 0  
+                self.timer_graph_1.timeout.connect(lambda: self.slide_through_data(Graph, signalData, GraphNum))
+                self.timer_graph_1.start(200)  
             else:
-                self.time_index_graph_2=0
-                self.timer_graph_2.timeout.connect(lambda: self.slide_through_data(Graph,signalData, GraphNum))
-                self.timer_graph_2.start(200)
+                self.timer_graph_2.stop()
+                self.time_index_graph_2 = 0  
+                self.timer_graph_2.timeout.connect(lambda: self.slide_through_data(Graph, signalData, GraphNum))
+                self.timer_graph_2.start(200)  
+
 
     def slide_through_data(self, Graph, signalData, GraphNum):
-        if signalData is None or len(signalData) ==0:
-            print("There's not signal data.")
+        if signalData is None or len(signalData) == 0:
+            print("There's no signal data.")
             return
         
-        # Plot the signal at this time index.
+        # Plot the signal based on the time index
         if self.linkedSignals:
             Graph.clear()
-            Graph.plot(signalData[:self.time_index_linked_graphs + 1,1], pen=f'{self.linked_graphs_color}')
+            Graph.plot(signalData[:self.time_index_linked_graphs + 1, 1], pen=f'{self.linked_graphs_color}')
+            
             if self.time_index_linked_graphs > self.windowSize:
                 Graph.setXRange(self.time_index_linked_graphs - self.windowSize + 1, self.time_index_linked_graphs + 1)
             else:
                 Graph.setXRange(0, self.windowSize)
-
+            
             self.time_index_linked_graphs += 1
-            if self.time_index_linked_graphs > len(signalData):
-                self.timer_linked_graphs.stop()
-        
+            if self.time_index_linked_graphs >= len(signalData):
+                self.timer_linked_graphs.stop()  
+
         else:
             if GraphNum == 1:
-                Graph.plot(signalData[:self.time_index_graph_1 + 1,1] , pen=f'{self.graph1_color}')
+                Graph.clear()  
+                Graph.plot(signalData[:self.time_index_graph_1 + 1, 1], pen=f'{self.graph1_color}')
+                
+                # Set the x-axis range for scrolling effect
                 if self.time_index_graph_1 > self.windowSize:
                     Graph.setXRange(self.time_index_graph_1 - self.windowSize + 1, self.time_index_graph_1 + 1)
                 else:
                     Graph.setXRange(0, self.windowSize)
 
                 self.time_index_graph_1 += 1
-                if self.time_index_graph_1 > len(signalData):
-                    self.timer_graph_1.stop()
+                if self.time_index_graph_1 >= len(signalData):
+                    self.timer_graph_1.stop()  
             else:
-                Graph.plot(signalData[:self.time_index_graph_2 + 1,1] , pen=f'{self.graph2_color}')
+                Graph.clear()  
+                Graph.plot(signalData[:self.time_index_graph_2 + 1, 1], pen=f'{self.graph2_color}')
+                
+                # Set the x-axis range for scrolling effect
                 if self.time_index_graph_2 > self.windowSize:
                     Graph.setXRange(self.time_index_graph_2 - self.windowSize + 1, self.time_index_graph_2 + 1)
                 else:
                     Graph.setXRange(0, self.windowSize)
 
                 self.time_index_graph_2 += 1
-                if self.time_index_graph_2 > len(signalData):
-                    self.timer_graph_2.stop()
+                if self.time_index_graph_2 >= len(signalData):
+                    self.timer_graph_2.stop()  
 
-    
-    def generate_ecg_signal(self, x):
-        """Generate a synthetic ECG-like signal"""
-        # ECG signal model (combination of sine waves and noise)
-        ecg = np.sin(1.7 * np.pi * x)  # Simulate R peaks
-        ecg += 0.5 * np.sin(3.7 * np.pi * x)  # Simulate P and T waves
-        ecg += 0.2 * np.sin(7.0 * np.pi * x)  # Simulate finer fluctuations
-        #ecg += 0.05 * np.random.normal(size=len(x))  # Add some noise to simulate variability
-        return ecg
 
 
 def main():
