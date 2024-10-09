@@ -22,9 +22,7 @@ class FetchApi_MainWindow(QMainWindow):
         self.setStyleSheet("Background-color:#F0F0F0;")
         self.timer = QTimer(self) # Used primarly for cine mode
         self.time_index = 0 # For Cine Mode Scrolling
-        settings = RTIMU.Settings("RTIMULib")
-        self.imu = RTIMU.RTIMU(settings)
-        self.imu.IMUInit()
+
 
         self.fetchData()
 
