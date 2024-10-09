@@ -9,7 +9,7 @@ from PyQt5.QtCore import Qt , QTimer  # used for alignments.
 from PyQt5.QtWidgets import QLayout , QVBoxLayout , QHBoxLayout, QGridLayout ,QWidget, QFileDialog, QPushButton
 import pyqtgraph as pg
 from functions_graph import zoom_in, zoom_out, show_graph, hide_graph, increase_speed, decrease_speed, start_simulation, stop_simulation, rewind, change_color
-import RTIMU
+
 
 class FetchApi_MainWindow(QMainWindow):
 
