@@ -1,6 +1,6 @@
 # button_functions.py
 from PyQt5.QtWidgets import QColorDialog
-
+import numpy as np
 
 
 def increase_speed(UI_MainWindow, isLinked, graphNum):
@@ -52,10 +52,13 @@ def start_simulation(UI_MainWindow, isLinked, graphNum):
             UI_MainWindow.timer_linked_graphs.start()
             UI_MainWindow.timer_graph_1.start()
             UI_MainWindow.timer_graph_2.start()
+            # Update limits for linked graphs (if needed)
+            graph_1_h_slider_changed(UI_MainWindow,UI_MainWindow.graph_1_H_slider.value())
     else:
         if graphNum == 1:
             if not UI_MainWindow.timer_graph_1.isActive():
                 UI_MainWindow.timer_graph_1.start()
+                graph_1_h_slider_changed(UI_MainWindow,UI_MainWindow.graph_1_H_slider.value())
         else:
             if not UI_MainWindow.timer_graph_2.isActive():
                 UI_MainWindow.timer_graph_2.start()
@@ -179,4 +182,128 @@ def change_color(UI_MainWindow, isLinked ,graphNum):
                 UI_MainWindow.graph1_color  = color.name()
             else:
                 UI_MainWindow.graph2_color = color.name()
+
+def graph_1_h_slider_changed(self, value):
+    """Handles changes in the horizontal slider to move the graph window horizontally."""
+    if self.signal_data1 is not None:
+        # Get the total length of the signal (x-axis values)
+        total_length = len(self.signal_data1[0])  # Assuming signal_data1 is 2D
+
+        # Define the window size (number of data points visible at once)
+        window_size = 100  # Adjust this based on the visible range you want
+
+        # Ensure the window size doesn't exceed the signal length
+        if window_size > total_length:
+            window_size = total_length
+
+        # Get the min and max x-values based on the signal data
+        data_min = 0  # Assuming x-values start at index 0
+        data_max = total_length - window_size  # Adjusted to account for the window size
+
+        # Calculate the new x-axis range based on the slider's value
+        max_slider_value = self.graph_1_H_slider.maximum()
+        x_min = int((value / max_slider_value) * (data_max - data_min))  # Shift based on slider value
+        x_max = x_min + window_size  # Maintain the window size
+
+        # Ensure new limits do not exceed the actual data range
+        x_min = max(x_min, data_min)
+        x_max = min(x_max, total_length)
+
+        # Adjust the x-axis range on the graph
+        self.graph1.setXRange(x_min, x_max, padding=0)
+
+def graph_2_h_slider_changed(self, value):
+    """Handles changes in the horizontal slider to move the graph window horizontally."""
+    if self.signal_data2 is not None:
+        # Get the total length of the signal (x-axis values)
+        total_length = len(self.signal_data2[0])  # Assuming signal_data2 is 2D
+
+        # Define the window size (number of data points visible at once)
+        window_size = 100  # Adjust this based on the visible range you want
+
+        # Ensure the window size doesn't exceed the signal length
+        if window_size > total_length:
+            window_size = total_length
+
+        # Get the min and max x-values based on the signal data
+        data_min = 0  # Assuming x-values start at index 0
+        data_max = total_length - window_size  # Adjusted to account for the window size
+
+        # Calculate the new x-axis range based on the slider's value
+        max_slider_value = self.graph_2_H_slider.maximum()
+        x_min = int((value / max_slider_value) * (data_max - data_min))  # Shift based on slider value
+        x_max = x_min + window_size  # Maintain the window size
+
+        # Ensure new limits do not exceed the actual data range
+        x_min = max(x_min, data_min)
+        x_max = min(x_max, total_length)
+
+        # Adjust the x-axis range on the graph
+        self.graph2.setXRange(x_min, x_max, padding=0)
+
+
+def graph_1_v_slider_changed(self, value):
+    """Handles changes in the vertical slider to move the graph window vertically."""
+    if self.signal_data1 is not None:
+        # Get the current y-values of the signal (y-axis range)
+        current_y_min, current_y_max = self.graph1.viewRange()[1]
         
+        # Get the total range of the y-axis based on the signal data
+        data_min = np.min(self.signal_data1)
+        data_max = np.max(self.signal_data1)
+
+        print(data_max)
+        print(data_min)
+        
+        # Calculate the current y-range
+        current_y_range = current_y_max - current_y_min
+        
+        # Determine the amount to shift the view based on the slider's value
+        # Scale the slider value to the range of y data
+        max_slider_value = self.graph_1_V_slider.maximum()
+        shift_amount = (value / max_slider_value) * (data_max - data_min)
+
+        # Calculate new y-limits based on the shift
+        new_y_min = data_min + shift_amount - (current_y_range / 2)
+        new_y_max = data_min + shift_amount + (current_y_range / 2)
+
+        # Ensure the new limits do not exceed the data limits
+        new_y_min = max(new_y_min, data_min)
+        new_y_max = min(new_y_max, data_max)
+
+        # Adjust the y-axis range on the graph
+        self.graph1.setYRange(new_y_min, new_y_max, padding=0)
+
+
+def graph_2_v_slider_changed(self, value):
+    """Handles changes in the vertical slider to move the graph window vertically."""
+    if self.signal_data2 is not None:
+        # Get the current y-values of the signal (y-axis range)
+        current_y_min, current_y_max = self.graph2.viewRange()[1]
+        
+        # Get the total range of the y-axis based on the signal data
+        data_min = np.min(self.signal_data2)
+        data_max = np.max(self.signal_data2)
+
+        print(data_max)
+        print(data_min)
+        
+        # Calculate the current y-range
+        current_y_range = current_y_max - current_y_min
+        
+        # Determine the amount to shift the view based on the slider's value
+        # Scale the slider value to the range of y data
+        max_slider_value = self.graph_2_V_slider.maximum()
+        shift_amount = (value / max_slider_value) * (data_max - data_min)
+
+        # Calculate new y-limits based on the shift
+        new_y_min = data_min + shift_amount - (current_y_range / 2)
+        new_y_max = data_min + shift_amount + (current_y_range / 2)
+
+        # Ensure the new limits do not exceed the data limits
+        new_y_min = max(new_y_min, data_min)
+        new_y_max = min(new_y_max, data_max)
+
+        # Adjust the y-axis range on the graph
+        self.graph2.setYRange(new_y_min, new_y_max, padding=0)
+

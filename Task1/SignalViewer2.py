@@ -13,8 +13,8 @@ from PyQt5.QtGui import QIcon , QFont, QPixmap # Package to set an icon , fonts 
 from PyQt5.QtCore import Qt , QTimer  # used for alignments.
 from PyQt5.QtWidgets import QLayout , QVBoxLayout , QHBoxLayout, QGridLayout ,QWidget, QFileDialog, QPushButton
 import pyqtgraph as pg
+
 from fetchApiData import FetchApi_MainWindow
-from GlueMenu import Ui_GlueMenu
 from functions_graph import zoom_in, zoom_out, show_graph, hide_graph, increase_speed, decrease_speed, start_simulation, stop_simulation, rewind, change_color, graph_1_h_slider_changed, graph_1_v_slider_changed , graph_2_h_slider_changed , graph_2_v_slider_changed
 
 class Ui_MainWindow(QMainWindow):
@@ -54,7 +54,8 @@ class Ui_MainWindow(QMainWindow):
 
         self.change_to_graph_1.clicked.connect(self.move_to_graph_2_to_1)
         self.change_to_graph_2.clicked.connect(self.move_to_graph_1_to_2)
-
+        # Horizontal Slider for Graph 1
+        # Connecting the horizontal slider to the function
         self.graph_1_H_slider.valueChanged.connect(lambda: graph_1_h_slider_changed(self,self.graph_1_H_slider.value()))
         # Connecting the horizontal slider to the function
         self.graph_1_V_slider.valueChanged.connect(lambda: graph_1_v_slider_changed(self,self.graph_1_V_slider.value()))
@@ -64,6 +65,8 @@ class Ui_MainWindow(QMainWindow):
         self.graph_2_H_slider.valueChanged.connect(lambda: graph_2_h_slider_changed(self,self.graph_2_H_slider.value()))
         # Connecting the horizontal slider to the function
         self.graph_2_V_slider.valueChanged.connect(lambda: graph_2_v_slider_changed(self,self.graph_2_V_slider.value()))
+
+
 
     #moving_graphs
     def move_to_graph_1_to_2(self):
@@ -139,10 +142,6 @@ class Ui_MainWindow(QMainWindow):
     def apiData(self):
         self.apiData = FetchApi_MainWindow()
         self.apiData.show()
-    def glueSignals(self):
-        self.signalGlue = Ui_GlueMenu()
-        self.signalGlue.show()
-    
 
     def setupUiElements(self):
         
@@ -177,7 +176,9 @@ class Ui_MainWindow(QMainWindow):
         self.graph_1_V_slider.setGeometry(QtCore.QRect(940, 30, 22, 271))
         self.graph_1_V_slider.setOrientation(QtCore.Qt.Vertical)
         self.graph_1_V_slider.setObjectName("graph_1_V_slider")
-        
+        # Set the slider's initial value to the center of its range
+        initial_value = (self.graph_1_V_slider.minimum() + self.graph_1_V_slider.maximum()) // 2
+        self.graph_1_V_slider.setValue(initial_value)
         #-- Graph 1 Zoom In --#
         self.sideWidget_1 = QWidget(self.Graph1_Section)
         self.sideWidget_1.setGeometry(QtCore.QRect(970, 20, 300, 350))
@@ -402,6 +403,10 @@ class Ui_MainWindow(QMainWindow):
         self.graph_2_V_slider.setGeometry(QtCore.QRect(940, 30, 22, 251))
         self.graph_2_V_slider.setOrientation(QtCore.Qt.Vertical)
         self.graph_2_V_slider.setObjectName("graph_1_V_slider_2")
+
+        # Set the slider's initial value to the center of its range
+        initial_value = (self.graph_2_V_slider.minimum() + self.graph_2_V_slider.maximum()) // 2
+        self.graph_2_V_slider.setValue(initial_value)
         
         self.sideWidget_2 = QWidget(self.Graph2_Section)
         self.sideWidget_2.setGeometry(QtCore.QRect(970, 20, 300, 350))
@@ -619,7 +624,6 @@ class Ui_MainWindow(QMainWindow):
 
         self.actionSignal_Glue = QtWidgets.QAction("Signal Glue",self)
         self.actionSignal_Glue.setObjectName("Signal Glue")
-        self.actionSignal_Glue.triggered.connect(self.glueSignals)
 
         self.menuOptions.addAction(self.actionApiData)
         self.menuOptions.addAction(self.actionLink_Signals)
