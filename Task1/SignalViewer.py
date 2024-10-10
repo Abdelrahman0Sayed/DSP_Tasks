@@ -139,10 +139,12 @@ class Ui_MainWindow(QMainWindow):
     def apiData(self):
         self.apiData = FetchApi_MainWindow()
         self.apiData.show()
+
     def glueSignals(self):
-        self.signalGlue = Ui_GlueMenu()
+        print(self.graph_1_files)
+        self.signalGlue = Ui_GlueMenu(None,self.graph_1_files, self.graph_2_files, self.signal_data1, self.signal_data2)
         self.signalGlue.show()
-    
+ 
 
     def setupUiElements(self):
         
