@@ -15,7 +15,7 @@ from PyQt5.QtWidgets import QLayout , QVBoxLayout , QHBoxLayout, QGridLayout ,QW
 import pyqtgraph as pg
 from fetchApiData import FetchApi_MainWindow
 from GlueMenu import Ui_GlueMenu
-from functions_graph import zoom_in, zoom_out, show_graph, hide_graph, increase_speed, decrease_speed, start_simulation, stop_simulation, rewind, change_color, graph_1_h_slider_changed, graph_1_v_slider_changed , graph_2_h_slider_changed , graph_2_v_slider_changed
+from functions_graph import zoom_in, zoom_out, show_graph, hide_graph, increase_speed, decrease_speed, start_simulation, stop_simulation, rewind, change_color, graph_1_h_slider_changed, graph_1_v_slider_changed , graph_2_h_slider_changed , graph_2_v_slider_changed, adjust_graph_1_slider_max, adjust_graph_2_slider_max
 
 class Ui_MainWindow(QMainWindow):
 
@@ -167,7 +167,7 @@ class Ui_MainWindow(QMainWindow):
         self.graph_1_H_slider.setOrientation(QtCore.Qt.Horizontal)
         self.graph_1_H_slider.setObjectName("graph_1_H_slider")
         self.graph_1_H_slider.setMinimum(0)
-        self.graph_1_H_slider.setMaximum(5000)  # Placeholder; will update based on the signal length
+        self.graph_1_H_slider.setMaximum(5000000)  # Placeholder; will update based on the signal length
         self.graph_1_H_slider.setValue(0)
         self.graph_1_H_slider.setTickInterval(1)
 
@@ -659,6 +659,7 @@ class Ui_MainWindow(QMainWindow):
                     self.graph1.clear()  # Clear the graph
                     signalData = self.loadSignalData(self.graph_1_files[0])
                     self.signal_data1 = signalData
+                    adjust_graph_1_slider_max(self)
                     self.signalPlotting(self.graph1, signalData, 1)  # Plot the new data on graph 1
 
                 else:
@@ -669,6 +670,7 @@ class Ui_MainWindow(QMainWindow):
                     self.graph2.clear()  # Clear the graph
                     signalData = self.loadSignalData(self.graph_2_files[0])
                     self.signal_data2 = signalData
+                    adjust_graph_2_slider_max(self)
                     self.signalPlotting(self.graph2, signalData, 2)  # Plot the new data on graph 2
 
                 if signalData is None:
@@ -708,7 +710,6 @@ class Ui_MainWindow(QMainWindow):
     
     def signalPlotting(self, Graph, signalData, GraphNum):
         Graph.clear()  
-
         if self.linkedSignals:
             self.timer_graph_1.stop()
             self.timer_graph_2.stop()
@@ -734,47 +735,63 @@ class Ui_MainWindow(QMainWindow):
             print("There's no signal data.")
             return
         
-        # Plot the signal based on the time index
+        # Plot the signal incrementally based on the current time index
         if self.linkedSignals:
             Graph.clear()
             Graph.plot(signalData[:self.time_index_linked_graphs + 1, 1], pen=f'{self.linked_graphs_color}')
             
+            # Dynamically update the slider maximum to reflect the new time index
+            self.graph_1_H_slider.setMaximum(self.time_index_linked_graphs)
+            self.graph_2_H_slider.setMaximum(self.time_index_linked_graphs)
+
+            # Adjust the x-axis range for scrolling effect
             if self.time_index_linked_graphs > self.windowSize:
                 Graph.setXRange(self.time_index_linked_graphs - self.windowSize + 1, self.time_index_linked_graphs + 1)
             else:
                 Graph.setXRange(0, self.windowSize)
             
+            # Increment the time index for linked graphs
             self.time_index_linked_graphs += 1
             if self.time_index_linked_graphs >= len(signalData):
-                self.timer_linked_graphs.stop()  
+                self.timer_linked_graphs.stop()  # Stop the timer when the entire signal has been plotted
 
         else:
             if GraphNum == 1:
                 Graph.clear()  
                 Graph.plot(signalData[:self.time_index_graph_1 + 1, 1], pen=f'{self.graph1_color}')
                 
-                # Set the x-axis range for scrolling effect
+                # Dynamically update the horizontal slider maximum for graph 1
+                self.graph_1_H_slider.setMaximum(self.time_index_graph_1)
+
+                # Adjust the x-axis range for scrolling effect
                 if self.time_index_graph_1 > self.windowSize:
                     Graph.setXRange(self.time_index_graph_1 - self.windowSize + 1, self.time_index_graph_1 + 1)
                 else:
                     Graph.setXRange(0, self.windowSize)
 
+                # Increment the time index for graph 1
                 self.time_index_graph_1 += 1
                 if self.time_index_graph_1 >= len(signalData):
-                    self.timer_graph_1.stop()  
+                    self.timer_graph_1.stop()  # Stop the timer when the entire signal has been plotted
+                    
             else:
                 Graph.clear()  
                 Graph.plot(signalData[:self.time_index_graph_2 + 1, 1], pen=f'{self.graph2_color}')
                 
-                # Set the x-axis range for scrolling effect
+                # Dynamically update the horizontal slider maximum for graph 2
+                self.graph_2_H_slider.setMaximum(self.time_index_graph_2)
+
+                # Adjust the x-axis range for scrolling effect
                 if self.time_index_graph_2 > self.windowSize:
                     Graph.setXRange(self.time_index_graph_2 - self.windowSize + 1, self.time_index_graph_2 + 1)
                 else:
                     Graph.setXRange(0, self.windowSize)
 
+                # Increment the time index for graph 2
                 self.time_index_graph_2 += 1
                 if self.time_index_graph_2 >= len(signalData):
-                    self.timer_graph_2.stop()  
+                    self.timer_graph_2.stop()  # Stop the timer when the entire signal has been plotted
+
 
 
 

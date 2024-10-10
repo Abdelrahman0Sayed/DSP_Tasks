@@ -53,15 +53,17 @@ def start_simulation(UI_MainWindow, isLinked, graphNum):
             UI_MainWindow.timer_graph_1.start()
             UI_MainWindow.timer_graph_2.start()
             # Update limits for linked graphs (if needed)
-            graph_1_h_slider_changed(UI_MainWindow,UI_MainWindow.graph_1_H_slider.value())
+            adjust_graph_1_slider_max(UI_MainWindow)
+            adjust_graph_2_slider_max(UI_MainWindow)
     else:
         if graphNum == 1:
             if not UI_MainWindow.timer_graph_1.isActive():
                 UI_MainWindow.timer_graph_1.start()
-                graph_1_h_slider_changed(UI_MainWindow,UI_MainWindow.graph_1_H_slider.value())
+                adjust_graph_1_slider_max(UI_MainWindow)
         else:
             if not UI_MainWindow.timer_graph_2.isActive():
                 UI_MainWindow.timer_graph_2.start()
+                adjust_graph_2_slider_max(UI_MainWindow)
 
 
 def stop_simulation(UI_MainWindow, isLinked, graphNum):
@@ -71,11 +73,13 @@ def stop_simulation(UI_MainWindow, isLinked, graphNum):
             UI_MainWindow.timer_graph_1.stop()
             UI_MainWindow.timer_graph_2.stop()
             UI_MainWindow.timer_linked_graphs.stop()
+            adjust_graph_1_slider_max(UI_MainWindow)
     else:
         if graphNum == 1:
             if  UI_MainWindow.timer_graph_1.isActive():
                 print("graph1 timer is active")
                 UI_MainWindow.timer_graph_1.stop()
+                adjust_graph_1_slider_max(UI_MainWindow)
         else:
             if  UI_MainWindow.timer_graph_2.isActive():
                 print("graph2 timer is active")
@@ -186,60 +190,52 @@ def change_color(UI_MainWindow, isLinked ,graphNum):
 def graph_1_h_slider_changed(self, value):
     """Handles changes in the horizontal slider to move the graph window horizontally."""
     if self.signal_data1 is not None:
-        # Get the total length of the signal (x-axis values)
-        total_length = len(self.signal_data1[0])  # Assuming signal_data1 is 2D
-
-        # Define the window size (number of data points visible at once)
-        window_size = 100  # Adjust this based on the visible range you want
-
-        # Ensure the window size doesn't exceed the signal length
+        total_length = len(self.signal_data1)  # Get the signal length
+        window_size = 100  # Visible window size
+        
+        # Adjust if the window size is greater than total length
         if window_size > total_length:
             window_size = total_length
 
-        # Get the min and max x-values based on the signal data
-        data_min = 0  # Assuming x-values start at index 0
-        data_max = total_length - window_size  # Adjusted to account for the window size
+        # Compute the maximum range for the x-axis
+        data_min = 0
+        data_max = total_length - window_size
 
-        # Calculate the new x-axis range based on the slider's value
-        max_slider_value = self.graph_1_H_slider.maximum()
-        x_min = int((value / max_slider_value) * (data_max - data_min))  # Shift based on slider value
-        x_max = x_min + window_size  # Maintain the window size
+        # Calculate the current position based on the slider value
+        max_slider_value = self.graph_1_H_slider.maximum()  # Make sure this is updated
+        x_min = int((value / max_slider_value) * data_max)  # Scale based on slider
+        x_max = x_min + window_size
 
-        # Ensure new limits do not exceed the actual data range
-        x_min = max(x_min, data_min)
-        x_max = min(x_max, total_length)
-
-        # Adjust the x-axis range on the graph
+        # Set the graph's x-axis range
         self.graph1.setXRange(x_min, x_max, padding=0)
+
+        # Debugging print statements to check calculations
+        
 
 def graph_2_h_slider_changed(self, value):
     """Handles changes in the horizontal slider to move the graph window horizontally."""
     if self.signal_data2 is not None:
-        # Get the total length of the signal (x-axis values)
-        total_length = len(self.signal_data2[0])  # Assuming signal_data2 is 2D
-
-        # Define the window size (number of data points visible at once)
-        window_size = 100  # Adjust this based on the visible range you want
-
-        # Ensure the window size doesn't exceed the signal length
+        total_length = len(self.signal_data2)  # Get the signal length
+        window_size = 100  # Visible window size
+        
+        # Adjust if the window size is greater than total length
         if window_size > total_length:
             window_size = total_length
 
-        # Get the min and max x-values based on the signal data
-        data_min = 0  # Assuming x-values start at index 0
-        data_max = total_length - window_size  # Adjusted to account for the window size
+        # Compute the maximum range for the x-axis
+        data_min = 0
+        data_max = total_length - window_size
 
-        # Calculate the new x-axis range based on the slider's value
-        max_slider_value = self.graph_2_H_slider.maximum()
-        x_min = int((value / max_slider_value) * (data_max - data_min))  # Shift based on slider value
-        x_max = x_min + window_size  # Maintain the window size
+        # Calculate the current position based on the slider value
+        max_slider_value = self.graph_2_H_slider.maximum()  # Make sure this is updated
+        x_min = int((value / max_slider_value) * data_max)  # Scale based on slider
+        x_max = x_min + window_size
 
-        # Ensure new limits do not exceed the actual data range
-        x_min = max(x_min, data_min)
-        x_max = min(x_max, total_length)
-
-        # Adjust the x-axis range on the graph
+        # Set the graph's x-axis range
         self.graph2.setXRange(x_min, x_max, padding=0)
+
+        # Debugging print statements to check calculations
+        
 
 
 def graph_1_v_slider_changed(self, value):
@@ -306,4 +302,29 @@ def graph_2_v_slider_changed(self, value):
 
         # Adjust the y-axis range on the graph
         self.graph2.setYRange(new_y_min, new_y_max, padding=0)
+
+def adjust_graph_1_slider_max(self):
+    if self.signal_data1 is not None:
+        total_length = len(self.signal_data1)  # Get the length of the signal
+        window_size = 100  # The size of the visible window (you can adjust this)
+
+        # Calculate the maximum slider value based on the total signal length
+        max_slider_value = max(0, total_length - window_size)
+        
+        # Set the maximum value for the horizontal slider
+        self.graph_1_H_slider.setMaximum(max_slider_value)
+        
+        print(f"Graph 1 Slider Max Value Set to: {max_slider_value}")
+
+
+def adjust_graph_2_slider_max(self):
+    """Adjusts the maximum value of the graph 2 horizontal slider based on signal length."""
+    if self.signal_data2 is not None:
+        total_length = len(self.signal_data2[0])  # Assuming signal_data2 is 2D
+        window_size = 100  # Adjust as needed
+        max_slider_value = max(0, total_length - window_size)
+        
+        # Set the slider maximum dynamically and print it for debugging
+        self.graph_2_H_slider.setMaximum(max_slider_value)
+        print(f"Graph 2 Max Slider Value Set to: {max_slider_value}")
 
