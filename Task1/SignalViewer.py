@@ -11,7 +11,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel, QSlider
 from PyQt5.QtGui import QIcon , QFont, QPixmap, QColor # Package to set an icon , fonts and images
 from PyQt5.QtCore import Qt , QTimer  # used for alignments.
-from PyQt5.QtWidgets import QLayout , QVBoxLayout , QHBoxLayout, QGridLayout ,QWidget, QFileDialog, QPushButton
+from PyQt5.QtWidgets import QLayout , QVBoxLayout , QHBoxLayout, QGridLayout ,QWidget, QFileDialog, QPushButton, QColorDialog, QInputDialog
 import pyqtgraph as pg
 import random
 from fetchApiData import FetchApi_MainWindow
@@ -41,7 +41,7 @@ class Ui_MainWindow(QMainWindow):
         self.start_graph_1.clicked.connect(lambda: start_simulation(self, self.linkedSignals, 1))
         self.stop_graph_1.clicked.connect(lambda: stop_simulation(self, self.linkedSignals, 1))
         self.rewind_graph1.clicked.connect(lambda: rewind(self, self.linkedSignals , 1))
-        self.Change_color_1.clicked.connect(lambda: change_color(self, self.linkedSignals, 1))
+        self.Change_color_1.clicked.connect(lambda: self.openColorChangeDialog(1))
 
         # Button connections for Graph 2
         self.zoom_in_graph2.clicked.connect(lambda: zoom_in(self, self.linkedSignals, 2))
@@ -54,6 +54,7 @@ class Ui_MainWindow(QMainWindow):
         self.stop_graph_2.clicked.connect(lambda: stop_simulation(self, self.linkedSignals, 2))
         self.rewind_graph2.clicked.connect(lambda: rewind(self, self.linkedSignals, 2))
         self.Change_color_2.clicked.connect(lambda: change_color(self, self.linkedSignals, 2))
+        self.Change_color_2.clicked.connect(lambda: self.openColorChangeDialog(2))
 
         self.change_to_graph_1.clicked.connect(self.move_to_graph_2_to_1)
         self.change_to_graph_2.clicked.connect(self.move_to_graph_1_to_2)
@@ -660,9 +661,9 @@ class Ui_MainWindow(QMainWindow):
             try:
                 if graphNum == 1:
                     print(f"The Length of list = {len(self.graph_1_files)}")
-                    
-                    self.graph_1_files.append(file_path)
-                    self.graph1_colors.append(self.get_random_color())  # Assign a random color for the signal
+                    if file_path not in self.graph_1_files:
+                        self.graph_1_files.append(file_path)
+                        self.graph1_colors.append(self.get_random_color())  # Assign a random color for the signal
                     
                     self.timer_graph_1.stop()
                     signalData = self.loadSignalData(file_path)
@@ -670,9 +671,10 @@ class Ui_MainWindow(QMainWindow):
 
                 else:
                     print(f"The Length of list = {len(self.graph_2_files)}")
-                    
-                    self.graph_2_files.append(file_path)
-                    self.graph2_colors.append(self.get_random_color())  # Assign a random color for the signal
+
+                    if file_path not in self.graph_2_files: 
+                        self.graph_2_files.append(file_path)
+                        self.graph2_colors.append(self.get_random_color())  # Assign a random color for the signal
                     
                     self.timer_graph_2.stop()
                     signalData = self.loadSignalData(file_path)
@@ -780,6 +782,66 @@ class Ui_MainWindow(QMainWindow):
                 if self.time_index_graph_2 >= len(signalData):
                     self.timer_graph_2.stop() 
 
+    def openColorChangeDialog(self, GraphNum):
+        # Check if any signals are loaded in either graph
+        if len(self.graph_1_files) == 0 and len(self.graph_2_files) == 0:
+            print("No signals loaded to change color.")
+            return
+        
+        # Create a dialog to choose the signal
+        if GraphNum == 1:
+            #This return the Selected Signal and if the signal is selected or not
+            signalSelector, isPressed = QInputDialog.getItem(
+                self,
+                "Select Signal",
+                "Choose the signal to change its color:",
+                self.graph_1_files,  # Combine signals from both graphs
+                0,
+                False
+            )
+            if isPressed and signalSelector:
+                # get the index of the signal that the user choose
+                signalIndex = (self.graph_1_files).index(signalSelector)
+                if signalIndex < len(self.graph_1_files):
+                    # Open a color picker dialog
+                    newColor = QColorDialog.getColor()
+                    if newColor.isValid():
+                        self.updateSignalColor(1, signalIndex, newColor)
+            else:
+                print("Invalid color selected.")
+       
+        else:
+            # This return the Selected Signal and if the signal is selected or not
+            signalSelector, isPressed = QInputDialog.getItem(
+                self,
+                "Select Signal",
+                "Choose the signal to change its color:",
+                self.graph_2_files,  # Combine signals from both graphs
+                0,
+                False
+            )
+            if isPressed and signalSelector:
+                # get the index of the signal that the user choose
+                signalIndex = (self.graph_2_files).index(signalSelector)
+                if signalIndex < len(self.graph_2_files):
+                    # Open a color picker dialog
+                    newColor = QColorDialog.getColor()
+                    if newColor.isValid():
+                        self.updateSignalColor(2, signalIndex, newColor)
+            else:
+                print("Invalid color selected.")
+
+    
+    def updateSignalColor(self, graphNum, signalIndex, newColor):
+        if graphNum == 1:
+            # Update color for the selected signal in graph 1
+            self.graph1_colors[signalIndex] = newColor
+        else:
+            # Update color for the selected signal in graph 2
+            self.graph2_colors[signalIndex] = newColor
+
+
+    
 
 
 def main():
