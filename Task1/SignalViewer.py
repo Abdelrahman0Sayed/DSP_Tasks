@@ -142,7 +142,7 @@ class Ui_MainWindow(QMainWindow):
 
     def glueSignals(self):
         print(self.graph_1_files)
-        self.signalGlue = Ui_GlueMenu(None,self.graph_1_files, self.graph_2_files, self.signal_data1, self.signal_data2)
+        self.signalGlue = Ui_GlueMenu(None, self.signal_data1, self.signal_data2)
         self.signalGlue.show()
  
 
