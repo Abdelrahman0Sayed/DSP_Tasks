@@ -1,7 +1,24 @@
-import numpy as np
 from PyQt5 import QtCore, QtWidgets
-from PyQt5.QtWidgets import QMainWindow, QSlider, QLabel, QGroupBox, QVBoxLayout, QGridLayout, QSpinBox, QComboBox
+from PyQt5.QtWidgets import QMainWindow, QSlider, QLabel, QGroupBox, QVBoxLayout, QGridLayout, QSpinBox, QComboBox, QDialog, QPushButton
 import pyqtgraph as pg
+import numpy as np
+
+
+class GluedSignalPopup(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Glued Signal")
+        self.resize(800, 600)
+        self.setupUi()
+
+    def setupUi(self):
+        layout = QVBoxLayout(self)
+        self.graphWidget_glued = pg.PlotWidget(self)
+        layout.addWidget(self.graphWidget_glued)
+
+    def plot_glued_signal(self, time, signal):
+        self.graphWidget_glued.clear()
+        self.graphWidget_glued.plot(time, signal, pen='g')
 
 
 class Ui_GlueMenu(QMainWindow):
@@ -49,10 +66,17 @@ class Ui_GlueMenu(QMainWindow):
         # Create a plot widget for the glued signal
         self.graphWidget_glued = pg.PlotWidget(self.centralwidget)
         main_layout.addWidget(self.graphWidget_glued, stretch=3)
+        #hide the glued signal plot
+        self.graphWidget_glued.hide()
 
         # Glue button
         self.glueButton = QtWidgets.QPushButton("Glue Signals", self.centralwidget)
         main_layout.addWidget(self.glueButton)
+
+        # Show glued signal button
+        self.showGluedSignalButton = QtWidgets.QPushButton("Show Glued Signal", self.centralwidget)
+        main_layout.addWidget(self.showGluedSignalButton)
+        self.showGluedSignalButton.clicked.connect(self.show_glued_signal_popup)
 
         # Group box for Signal 1 controls
         group_box1 = QGroupBox("Signal 1 Controls")
@@ -184,10 +208,12 @@ class Ui_GlueMenu(QMainWindow):
         initial_x_range = 1000  # Adjust this value as needed
         self.graphWidget1.setXRange(0, initial_x_range, padding=0)
         self.graphWidget2.setXRange(0, initial_x_range, padding=0)
+        self.graphWidget_glued.setXRange(0, initial_x_range, padding=0)
 
-        # Enable panning
-        self.graphWidget1.setMouseEnabled(x=True, y=False)
-        self.graphWidget2.setMouseEnabled(x=True, y=False)
+        # Enable panning and zooming
+        self.graphWidget1.setMouseEnabled(x=True, y=True)
+        self.graphWidget2.setMouseEnabled(x=True, y=True)
+        self.graphWidget_glued.setMouseEnabled(x=True, y=True)
 
         # Reset sliders to zero after plotting
         self.slider1.setValue(0)
@@ -260,3 +286,13 @@ class Ui_GlueMenu(QMainWindow):
 
         # Plot the glued signal
         self.graphWidget_glued.plot(combined_time, combined_signal, pen='g', name="Glued Signal")
+
+        # Store the glued signal data for the popup
+        self.glued_time = combined_time
+        self.glued_signal = combined_signal
+
+    def show_glued_signal_popup(self):
+        """ Show the glued signal in a popup window. """
+        self.popup = GluedSignalPopup(self)
+        self.popup.plot_glued_signal(self.glued_time, self.glued_signal)
+        self.popup.exec_()
