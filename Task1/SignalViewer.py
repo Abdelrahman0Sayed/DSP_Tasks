@@ -17,7 +17,7 @@ import random
 from fetchApiData import FetchApi_MainWindow
 from GlueMenu import Ui_GlueMenu
 from functions_graph import zoom_in, zoom_out, show_graph, hide_graph, increase_speed, decrease_speed, start_simulation, stop_simulation, rewind, change_color
-
+from nonRectangular import PolarEcgPlot
 
 class Ui_MainWindow(QMainWindow):
 
@@ -28,6 +28,17 @@ class Ui_MainWindow(QMainWindow):
     graph_2_files=[]
     all_signals=[]
 
+
+    def show_ecg_plot(self):
+        print("Start Non Rectangular Coordinates")
+        if self.ecg_plot_window is None:  # Create the window only if it doesn't exist
+            self.ecg_plot_window = PolarEcgPlot()
+            self.ecg_plot_window.LoadEcgGraph1Signals(self.graph_1_files, self.graph1_colors)
+            self.ecg_plot_window.LoadEcgGraph2Signals(self.graph_2_files, self.graph2_colors)
+            self.ecg_plot_window.show()
+        else:
+            self.ecg_plot_window.raise_()  # Bring to front if already exists
+        
 
 
     def setup_buttons_connections(self):
@@ -133,9 +144,8 @@ class Ui_MainWindow(QMainWindow):
         self.timer_linked_graphs = QTimer(self)  # Used primarily for cine mode
         self.time_index_linked_graphs = 0  # For Cine Mode Scrolling
 
-        self.graph1_color = "r"
-        self.graph2_color = "b"
-        self.linked_graphs_color = "y"
+
+        self.ecg_plot_window = None  # Instance variable to keep reference
 
         self.setupUiElements()  # Call method to set up UI components
         self.windowSize = 200
@@ -603,6 +613,8 @@ class Ui_MainWindow(QMainWindow):
         self.change_to_graph_1.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
 
         # Menu Bar for more features.
+        # For each menubar we need actions ? -> To Add Action while clicking on it (make sense)
+
         self.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(self)
         self.menubar.setGeometry(QtCore.QRect(0, 0, 1290, 20))
@@ -631,7 +643,10 @@ class Ui_MainWindow(QMainWindow):
         self.menuOptions.addAction(self.actionSignal_Glue)
         self.menubar.addAction(self.menuOptions.menuAction())
 
-        self.coordinates = self.menubar.addMenu('Bla Bla Coordinates')
+        self.coordinates = self.menubar.addMenu('Polar Coordinates')
+        self.actionPolarCoordinates = QtWidgets.QAction("Show Polar ECG Plot", self)
+        self.coordinates.addAction(self.actionPolarCoordinates)
+        self.actionPolarCoordinates.triggered.connect(lambda: self.show_ecg_plot())
 
         QtCore.QMetaObject.connectSlotsByName(self)
 
