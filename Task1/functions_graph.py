@@ -303,18 +303,18 @@ def graph_2_v_slider_changed(self, value):
         # Adjust the y-axis range on the graph
         self.graph2.setYRange(new_y_min, new_y_max, padding=0)
 
-# def adjust_graph_1_slider_max(self):
-#     if self.signal_data1 is not None:
-#         total_length = len(self.signal_data1)  # Get the length of the signal
-#         window_size = 100  # The size of the visible window (you can adjust this)
+def adjust_graph_1_slider_max(self):
+    if self.signal_data1 is not None:
+        total_length = len(self.signal_data1)  # Get the length of the signal
+        window_size = 100  # The size of the visible window (you can adjust this)
 
-#         # Calculate the maximum slider value based on the total signal length
-#         max_slider_value = max(0, total_length - window_size)
-        
-#         # Set the maximum value for the horizontal slider
-#         self.graph_1_H_slider.setMaximum(max_slider_value)
-        
-#         print(f"Graph 1 Slider Max Value Set to: {max_slider_value}")
+        # Calculate the maximum slider value based on the total signal length
+        max_slider_value = max(0, total_length - window_size)
+    
+        # Set the maximum value for the horizontal slider
+        self.graph_1_H_slider.setMaximum(max_slider_value)
+    
+        print(f"Graph 1 Slider Max Value Set to: {max_slider_value}")
 
 
 def adjust_graph_2_slider_max(self):
@@ -328,3 +328,14 @@ def adjust_graph_2_slider_max(self):
         self.graph_2_H_slider.setMaximum(max_slider_value)
         print(f"Graph 2 Max Slider Value Set to: {max_slider_value}")
 
+
+def setup_graph_widget(graph_widget):
+    """ Set up the graph widget with panning and zooming enabled. """
+    graph_widget.setMouseEnabled(x=True, y=True)
+    graph_widget.showGrid(x=True, y=True)
+    graph_widget.addLegend()
+
+def update_graph_data(graph_widget, x_data, y_data, pen='r'):
+    """ Update the graph widget with new data. """
+    graph_widget.clear()
+    graph_widget.plot(x_data, y_data, pen=pen)
