@@ -70,6 +70,25 @@ class Ui_MainWindow(QMainWindow):
         self.change_to_graph_1.clicked.connect(self.move_to_graph_2_to_1)
         self.change_to_graph_2.clicked.connect(self.move_to_graph_1_to_2)
 
+        self.graph_1_H_slider.valueChanged.connect(self.update_graph_positions)
+        self.graph_2_H_slider.valueChanged.connect(self.update_graph_positions)
+        self.graph_1_V_slider.valueChanged.connect(self.update_graph_positions)
+        self.graph_2_V_slider.valueChanged.connect(self.update_graph_positions)
+
+    def update_graph_positions(self):
+        """ Update the position of the graphs based on the slider values. """
+        # Get the current slider values
+        h_value1 = self.graph_1_H_slider.value()
+        h_value2 = self.graph_2_H_slider.value()
+        v_value1 = self.graph_1_V_slider.value()
+        v_value2 = self.graph_2_V_slider.value()
+
+        # Update the x-range and y-range of the graphs based on the slider values
+        self.graph1.setXRange(h_value1, h_value1 + 10, padding=0)
+        self.graph2.setXRange(h_value2, h_value2 + 10, padding=0)
+        self.graph1.setYRange(v_value1, v_value1 + 1, padding=0)
+        self.graph2.setYRange(v_value2, v_value2 + 1, padding=0)
+
     #moving_graphs
     def move_to_graph_1_to_2(self):
         if len(self.graph_1_files) > 0:
@@ -155,8 +174,7 @@ class Ui_MainWindow(QMainWindow):
         self.apiData.show()
     
     def glueSignals(self):
-        print(self.graph_1_files)
-        self.signalGlue = Ui_GlueMenu(None,self.graph_1_files, self.graph_2_files, self.signal_data1, self.signal_data2)
+        self.signalGlue = Ui_GlueMenu(None, self.loadSignalData(self.graph_1_files[0]), self.loadSignalData(self.graph_2_files[0]))
         self.signalGlue.show()
     
 
