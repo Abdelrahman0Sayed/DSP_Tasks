@@ -11,7 +11,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel, QSlider
 from PyQt5.QtGui import QIcon , QFont, QPixmap, QColor # Package to set an icon , fonts and images
 from PyQt5.QtCore import Qt , QTimer  # used for alignments.
-from PyQt5.QtWidgets import QLayout , QVBoxLayout , QHBoxLayout, QGridLayout ,QWidget, QFileDialog, QPushButton, QColorDialog, QInputDialog
+from PyQt5.QtWidgets import QLayout , QVBoxLayout , QHBoxLayout, QGridLayout ,QWidget, QFileDialog, QPushButton, QColorDialog, QInputDialog, QComboBox, QDialog
 import pyqtgraph as pg
 import random
 from fetchApiData import FetchApi_MainWindow
@@ -173,8 +173,20 @@ class Ui_MainWindow(QMainWindow):
         self.apiData = FetchApi_MainWindow()
         self.apiData.show()
     
-    def glueSignals(self):
-        self.signalGlue = Ui_GlueMenu(None, self.loadSignalData(self.graph_1_files[0]), self.loadSignalData(self.graph_2_files[0]))
+    def show_signal_selection_dialog(self):
+        dialog = SignalSelectionDialog(self.graph_1_files, self.graph_2_files, self)
+        if dialog.exec_() == QDialog.Accepted:
+            selected_signal_1 = dialog.selected_signal_1
+            selected_signal_2 = dialog.selected_signal_2
+            self.glue_signals(selected_signal_1, selected_signal_2)
+
+    def glue_signals(self, signal_1, signal_2):
+        # Load the selected signals
+        signal_data1 = self.loadSignalData(signal_1)
+        signal_data2 = self.loadSignalData(signal_2)
+
+        # Show the glue menu with the selected signals
+        self.signalGlue = Ui_GlueMenu(None, signal_data1, signal_data2)
         self.signalGlue.show()
     
 
@@ -655,7 +667,7 @@ class Ui_MainWindow(QMainWindow):
 
         self.actionSignal_Glue = QtWidgets.QAction("Signal Glue",self)
         self.actionSignal_Glue.setObjectName("Signal Glue")
-        self.actionSignal_Glue.triggered.connect(self.glueSignals)
+        self.actionSignal_Glue.triggered.connect(self.show_signal_selection_dialog)
 
         self.menuOptions.addAction(self.actionApiData)
         self.menuOptions.addAction(self.actionLink_Signals)
@@ -875,7 +887,50 @@ class Ui_MainWindow(QMainWindow):
             self.graph2_colors[signalIndex] = newColor
 
 
-    
+class SignalSelectionDialog(QDialog):
+    def __init__(self, graph_1_files, graph_2_files, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Select Signals")
+        self.graph_1_files = graph_1_files
+        self.graph_2_files = graph_2_files
+        self.selected_signal_1 = None
+        self.selected_signal_2 = None
+        self.setupUi()
+
+    def setupUi(self):
+        layout = QVBoxLayout(self)
+
+        # ComboBox for selecting signal from graph 1
+        self.comboBox1 = QComboBox(self)
+        self.comboBox1.addItems(self.graph_1_files)
+        layout.addWidget(QLabel("Select Signal from Graph 1:"))
+        layout.addWidget(self.comboBox1)
+
+        # ComboBox for selecting signal from graph 2
+        self.comboBox2 = QComboBox(self)
+        self.comboBox2.addItems(self.graph_2_files)
+        layout.addWidget(QLabel("Select Signal from Graph 2:"))
+        layout.addWidget(self.comboBox2)
+
+        # OK and Cancel buttons
+        button_layout = QHBoxLayout()
+        self.ok_button = QPushButton("OK", self)
+        self.cancel_button = QPushButton("Cancel", self)
+        button_layout.addWidget(self.ok_button)
+        button_layout.addWidget(self.cancel_button)
+        layout.addLayout(button_layout)
+
+        # Connect buttons
+        self.ok_button.clicked.connect(self.accept)
+        self.cancel_button.clicked.connect(self.reject)
+
+    def accept(self):
+        self.selected_signal_1 = self.comboBox1.currentText()
+        self.selected_signal_2 = self.comboBox2.currentText()
+        super().accept()
+
+    def reject(self):
+        super().reject() 
 
 
 def main():
