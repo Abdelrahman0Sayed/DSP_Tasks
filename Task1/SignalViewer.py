@@ -9,13 +9,15 @@ import sys
 import numpy as np
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel, QSlider
-from PyQt5.QtGui import QIcon , QFont, QPixmap # Package to set an icon , fonts and images
+from PyQt5.QtGui import QIcon , QFont, QPixmap, QColor # Package to set an icon , fonts and images
 from PyQt5.QtCore import Qt , QTimer  # used for alignments.
-from PyQt5.QtWidgets import QLayout , QVBoxLayout , QHBoxLayout, QGridLayout ,QWidget, QFileDialog, QPushButton
+from PyQt5.QtWidgets import QLayout , QVBoxLayout , QHBoxLayout, QGridLayout ,QWidget, QFileDialog, QPushButton, QColorDialog, QInputDialog
 import pyqtgraph as pg
+import random
 from fetchApiData import FetchApi_MainWindow
 from GlueMenu import Ui_GlueMenu
-from functions_graph import zoom_in, zoom_out, show_graph, hide_graph, increase_speed, decrease_speed, start_simulation, stop_simulation, rewind, change_color, graph_1_h_slider_changed, graph_1_v_slider_changed , graph_2_h_slider_changed , graph_2_v_slider_changed, adjust_graph_1_slider_max, adjust_graph_2_slider_max
+from functions_graph import zoom_in, zoom_out, show_graph, hide_graph, increase_speed, decrease_speed, start_simulation, stop_simulation, rewind, change_color
+from nonRectangular import PolarEcgPlot
 
 class Ui_MainWindow(QMainWindow):
 
@@ -25,6 +27,18 @@ class Ui_MainWindow(QMainWindow):
     graph_1_files= []
     graph_2_files=[]
     all_signals=[]
+
+
+    def show_ecg_plot(self):
+        print("Start Non Rectangular Coordinates")
+        if self.ecg_plot_window is None:  # Create the window only if it doesn't exist
+            self.ecg_plot_window = PolarEcgPlot()
+            self.ecg_plot_window.LoadEcgGraph1Signals(self.graph_1_files, self.graph1_colors)
+            self.ecg_plot_window.LoadEcgGraph2Signals(self.graph_2_files, self.graph2_colors)
+            self.ecg_plot_window.show()
+        else:
+            self.ecg_plot_window.raise_()  # Bring to front if already exists
+        
 
 
     def setup_buttons_connections(self):
@@ -38,7 +52,7 @@ class Ui_MainWindow(QMainWindow):
         self.start_graph_1.clicked.connect(lambda: start_simulation(self, self.linkedSignals, 1))
         self.stop_graph_1.clicked.connect(lambda: stop_simulation(self, self.linkedSignals, 1))
         self.rewind_graph1.clicked.connect(lambda: rewind(self, self.linkedSignals , 1))
-        self.Change_color_1.clicked.connect(lambda: change_color(self, self.linkedSignals, 1))
+        self.Change_color_1.clicked.connect(lambda: self.openColorChangeDialog(1))
 
         # Button connections for Graph 2
         self.zoom_in_graph2.clicked.connect(lambda: zoom_in(self, self.linkedSignals, 2))
@@ -51,25 +65,17 @@ class Ui_MainWindow(QMainWindow):
         self.stop_graph_2.clicked.connect(lambda: stop_simulation(self, self.linkedSignals, 2))
         self.rewind_graph2.clicked.connect(lambda: rewind(self, self.linkedSignals, 2))
         self.Change_color_2.clicked.connect(lambda: change_color(self, self.linkedSignals, 2))
+        self.Change_color_2.clicked.connect(lambda: self.openColorChangeDialog(2))
 
         self.change_to_graph_1.clicked.connect(self.move_to_graph_2_to_1)
         self.change_to_graph_2.clicked.connect(self.move_to_graph_1_to_2)
-
-        self.graph_1_H_slider.valueChanged.connect(lambda: graph_1_h_slider_changed(self,self.graph_1_H_slider.value()))
-        # Connecting the horizontal slider to the function
-        self.graph_1_V_slider.valueChanged.connect(lambda: graph_1_v_slider_changed(self,self.graph_1_V_slider.value()))
-
-        # Horizontal Slider for Graph 2
-        # Connecting the horizontal slider to the function
-        self.graph_2_H_slider.valueChanged.connect(lambda: graph_2_h_slider_changed(self,self.graph_2_H_slider.value()))
-        # Connecting the horizontal slider to the function
-        self.graph_2_V_slider.valueChanged.connect(lambda: graph_2_v_slider_changed(self,self.graph_2_V_slider.value()))
 
     #moving_graphs
     def move_to_graph_1_to_2(self):
         if len(self.graph_1_files) > 0:
             # Move the last signal from graph 1 to graph 2
             self.graph_2_files.append(self.graph_1_files.pop())  # Move file from graph 1 to graph 2
+            self.graph2_colors.append(self.graph1_colors.pop())  # Move color from graph 1 to graph 2
 
             self.timer_graph_1.stop()  # Stop timer for graph 1
             self.graph1.clear()  # Clear graph 1
@@ -88,10 +94,12 @@ class Ui_MainWindow(QMainWindow):
             print("No Signals to Move")
 
 
+
     def move_to_graph_2_to_1(self):
         if len(self.graph_2_files) > 0:
             # Move the last signal from graph 2 to graph 1
             self.graph_1_files.append(self.graph_2_files.pop())  # Move file from graph 2 to graph 1
+            self.graph1_colors.append(self.graph2_colors.pop())  # Move color from graph 2 to graph 1
 
             self.timer_graph_2.stop()  # Stop timer for graph 2
             self.graph1.clear()  # Clear graph 1
@@ -109,42 +117,48 @@ class Ui_MainWindow(QMainWindow):
         else:
             print("No Signals to Move")
 
+
     
 
     # Constructing the Main Window.
     def __init__(self):
         super().__init__()
         
+        self.graph_1_files = []  # Store file paths for Graph 1 signals
+        self.graph_2_files = []  # Store file paths for Graph 2 signals
+        self.graph1_colors = []  # Store colors for each signal in Graph 1
+        self.graph2_colors = []  # Store colors for each signal in Graph 2
+        
+        # Other existing initializations
         self.setWindowTitle("Multi Channel Signal Viewer")
         self.resize(1290, 909)
         self.setStyleSheet("Background-color:#F0F0F0;")
         self.linkedSignals = False
 
-        self.timer_graph_1 = QTimer(self) # Used primarly for cine mode
-        self.time_index_graph_1 = 0 # For Cine Mode Scrolling
-        
-        self.timer_graph_2 = QTimer(self) # Used primarly for cine mode
-        self.time_index_graph_2 = 0 # For Cine Mode Scrolling
-        
-        self.timer_linked_graphs = QTimer(self) # Used primarly for cine mode
-        self.time_index_linked_graphs = 0 # For Cine Mode Scrolling
-        
-        self.graph1_color = "r"
-        self.graph2_color = "b"
-        self.linked_graphs_color= "y"
+        self.timer_graph_1 = QTimer(self)  # Used primarily for cine mode
+        self.time_index_graph_1 = 0  # For Cine Mode Scrolling
 
-        self.setupUiElements()
-        self.windowSize= 70
+        self.timer_graph_2 = QTimer(self)  # Used primarily for cine mode
+        self.time_index_graph_2 = 0  # For Cine Mode Scrolling
+
+        self.timer_linked_graphs = QTimer(self)  # Used primarily for cine mode
+        self.time_index_linked_graphs = 0  # For Cine Mode Scrolling
+
+
+        self.ecg_plot_window = None  # Instance variable to keep reference
+
+        self.setupUiElements()  # Call method to set up UI components
+        self.windowSize = 200
     
     def apiData(self):
         self.apiData = FetchApi_MainWindow()
         self.apiData.show()
-
+    
     def glueSignals(self):
         print(self.graph_1_files)
-        self.signalGlue = Ui_GlueMenu(None, self.signal_data1, self.signal_data2)
+        self.signalGlue = Ui_GlueMenu(None,self.graph_1_files, self.graph_2_files, self.signal_data1, self.signal_data2)
         self.signalGlue.show()
- 
+    
 
     def setupUiElements(self):
         
@@ -169,7 +183,7 @@ class Ui_MainWindow(QMainWindow):
         self.graph_1_H_slider.setOrientation(QtCore.Qt.Horizontal)
         self.graph_1_H_slider.setObjectName("graph_1_H_slider")
         self.graph_1_H_slider.setMinimum(0)
-        self.graph_1_H_slider.setMaximum(5000000)  # Placeholder; will update based on the signal length
+        self.graph_1_H_slider.setMaximum(5000)  # Placeholder; will update based on the signal length
         self.graph_1_H_slider.setValue(0)
         self.graph_1_H_slider.setTickInterval(1)
 
@@ -600,6 +614,8 @@ class Ui_MainWindow(QMainWindow):
         self.change_to_graph_1.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
 
         # Menu Bar for more features.
+        # For each menubar we need actions ? -> To Add Action while clicking on it (make sense)
+
         self.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(self)
         self.menubar.setGeometry(QtCore.QRect(0, 0, 1290, 20))
@@ -628,7 +644,10 @@ class Ui_MainWindow(QMainWindow):
         self.menuOptions.addAction(self.actionSignal_Glue)
         self.menubar.addAction(self.menuOptions.menuAction())
 
-        self.coordinates = self.menubar.addMenu('Bla Bla Coordinates')
+        self.coordinates = self.menubar.addMenu('Polar Coordinates')
+        self.actionPolarCoordinates = QtWidgets.QAction("Show Polar ECG Plot", self)
+        self.coordinates.addAction(self.actionPolarCoordinates)
+        self.actionPolarCoordinates.triggered.connect(lambda: self.show_ecg_plot())
 
         QtCore.QMetaObject.connectSlotsByName(self)
 
@@ -645,34 +664,36 @@ class Ui_MainWindow(QMainWindow):
             self.timer_linked_graphs.stop()
             self.graph1.clear()
             self.graph2.clear()
+    
+    def get_random_color(self):
+        return QColor(random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
 
     def openSignalFile(self, Graph, graphNum):
         signalData = ""
         options = QFileDialog.Options()
         file_path, _ = QFileDialog.getOpenFileName(self, "Open Signal File", "", "File Extension (*.csv *.dat)", options=options)
-        
-        if file_path: 
+
+        if file_path:
             try:
                 if graphNum == 1:
-                    print(f"The Length of list ={len(self.graph_1_files)}")
+                    print(f"The Length of list = {len(self.graph_1_files)}")
+                    if file_path not in self.graph_1_files:
+                        self.graph_1_files.append(file_path)
+                        self.graph1_colors.append(self.get_random_color())  # Assign a random color for the signal
                     
-                    self.graph_1_files = [file_path]  # Replace the old file with the new one
                     self.timer_graph_1.stop()
-                    self.graph1.clear()  # Clear the graph
-                    signalData = self.loadSignalData(self.graph_1_files[0])
-                    self.signal_data1 = signalData
-                    adjust_graph_1_slider_max(self)
+                    signalData = self.loadSignalData(file_path)
                     self.signalPlotting(self.graph1, signalData, 1)  # Plot the new data on graph 1
 
                 else:
-                    print(f"The Length of list ={len(self.graph_2_files)}")
+                    print(f"The Length of list = {len(self.graph_2_files)}")
+
+                    if file_path not in self.graph_2_files: 
+                        self.graph_2_files.append(file_path)
+                        self.graph2_colors.append(self.get_random_color())  # Assign a random color for the signal
                     
-                    self.graph_2_files = [file_path]  # Replace the old file with the new one
                     self.timer_graph_2.stop()
-                    self.graph2.clear()  # Clear the graph
-                    signalData = self.loadSignalData(self.graph_2_files[0])
-                    self.signal_data2 = signalData
-                    adjust_graph_2_slider_max(self)
+                    signalData = self.loadSignalData(file_path)
                     self.signalPlotting(self.graph2, signalData, 2)  # Plot the new data on graph 2
 
                 if signalData is None:
@@ -681,8 +702,6 @@ class Ui_MainWindow(QMainWindow):
 
             except Exception as e:
                 print(f"Couldn't open signal file: {str(e)}")
-
-
 
     def loadSignalData(self, file_path):
         try:
@@ -693,10 +712,7 @@ class Ui_MainWindow(QMainWindow):
             if signalData is None or signalData.size == 0:
                 print(f"File at {file_path} contains no data.")
                 return None
-            
-            # If the data is 1D, convert it to 2D (for graph plotting)
-            if signalData.ndim == 1:
-                signalData = signalData[:, np.newaxis]
+
             
             return signalData
         except ValueError as ve:
@@ -709,92 +725,139 @@ class Ui_MainWindow(QMainWindow):
             print(f"An unexpected error occurred while loading signal data: {e}")
             return None
 
-    
     def signalPlotting(self, Graph, signalData, GraphNum):
-        Graph.clear()  
         if self.linkedSignals:
             self.timer_graph_1.stop()
             self.timer_graph_2.stop()
-            
-            self.time_index_linked_graphs = 0  
+
+            self.time_index_linked_graphs = 0
             self.timer_linked_graphs.timeout.connect(lambda: self.slide_through_data(Graph, signalData, 3))
             self.timer_linked_graphs.start(200)
         else:
             if GraphNum == 1:
                 self.timer_graph_1.stop()
-                self.time_index_graph_1 = 0  
+                self.time_index_graph_1 = 0
                 self.timer_graph_1.timeout.connect(lambda: self.slide_through_data(Graph, signalData, GraphNum))
-                self.timer_graph_1.start(200)  
+                self.timer_graph_1.start(200)
             else:
                 self.timer_graph_2.stop()
-                self.time_index_graph_2 = 0  
+                self.time_index_graph_2 = 0
                 self.timer_graph_2.timeout.connect(lambda: self.slide_through_data(Graph, signalData, GraphNum))
-                self.timer_graph_2.start(200)  
-
+                self.timer_graph_2.start(200)
 
     def slide_through_data(self, Graph, signalData, GraphNum):
         if signalData is None or len(signalData) == 0:
             print("There's no signal data.")
             return
-        
-        # Plot the signal incrementally based on the current time index
+
+        # Plot all signals on the graph with different colors
         if self.linkedSignals:
             Graph.clear()
-            Graph.plot(signalData[:self.time_index_linked_graphs + 1, 1], pen=f'{self.linked_graphs_color}')
-            
-            # Dynamically update the slider maximum to reflect the new time index
-            self.graph_1_H_slider.setMaximum(self.time_index_linked_graphs)
-            self.graph_2_H_slider.setMaximum(self.time_index_linked_graphs)
+            for i, signal in enumerate(self.graph_1_files + self.graph_2_files):
+                color = self.linked_graphs_color if i < len(self.graph_1_files) else self.graph2_colors[i - len(self.graph_1_files)]
+                Graph.plot(signalData[:self.time_index_linked_graphs + 1], pen=color)
 
-            # Adjust the x-axis range for scrolling effect
             if self.time_index_linked_graphs > self.windowSize:
                 Graph.setXRange(self.time_index_linked_graphs - self.windowSize + 1, self.time_index_linked_graphs + 1)
             else:
                 Graph.setXRange(0, self.windowSize)
-            
-            # Increment the time index for linked graphs
-            self.time_index_linked_graphs += 1
+
+            self.time_index_linked_graphs += 10
             if self.time_index_linked_graphs >= len(signalData):
-                self.timer_linked_graphs.stop()  # Stop the timer when the entire signal has been plotted
+                self.timer_linked_graphs.stop()
+                self.timer_graph_1.stop()
+                self.timer_graph_2.stop()
 
         else:
             if GraphNum == 1:
-                Graph.clear()  
-                Graph.plot(signalData[:self.time_index_graph_1 + 1, 1], pen=f'{self.graph1_color}')
-                
-                # Dynamically update the horizontal slider maximum for graph 1
-                self.graph_1_H_slider.setMaximum(self.time_index_graph_1)
+                Graph.clear()
+                for i, file in enumerate(self.graph_1_files):
+                    signal = self.loadSignalData(file)
+                    Graph.plot(signal[:self.time_index_graph_1 + 1], pen=self.graph1_colors[i])
 
-                # Adjust the x-axis range for scrolling effect
                 if self.time_index_graph_1 > self.windowSize:
                     Graph.setXRange(self.time_index_graph_1 - self.windowSize + 1, self.time_index_graph_1 + 1)
                 else:
                     Graph.setXRange(0, self.windowSize)
 
-                # Increment the time index for graph 1
-                self.time_index_graph_1 += 1
+                self.time_index_graph_1 += 10
                 if self.time_index_graph_1 >= len(signalData):
-                    self.timer_graph_1.stop()  # Stop the timer when the entire signal has been plotted
-                    
+                    self.timer_graph_1.stop()
             else:
-                Graph.clear()  
-                Graph.plot(signalData[:self.time_index_graph_2 + 1, 1], pen=f'{self.graph2_color}')
-                
-                # Dynamically update the horizontal slider maximum for graph 2
-                self.graph_2_H_slider.setMaximum(self.time_index_graph_2)
+                Graph.clear()
+                for i, file in enumerate(self.graph_2_files):
+                    signal = self.loadSignalData(file)
+                    Graph.plot(signal[:self.time_index_graph_2 + 1], pen=self.graph2_colors[i])
 
-                # Adjust the x-axis range for scrolling effect
                 if self.time_index_graph_2 > self.windowSize:
                     Graph.setXRange(self.time_index_graph_2 - self.windowSize + 1, self.time_index_graph_2 + 1)
                 else:
                     Graph.setXRange(0, self.windowSize)
 
-                # Increment the time index for graph 2
-                self.time_index_graph_2 += 1
+                self.time_index_graph_2 += 10
                 if self.time_index_graph_2 >= len(signalData):
-                    self.timer_graph_2.stop()  # Stop the timer when the entire signal has been plotted
+                    self.timer_graph_2.stop() 
+
+    def openColorChangeDialog(self, GraphNum):
+        # Check if any signals are loaded in either graph
+        if len(self.graph_1_files) == 0 and len(self.graph_2_files) == 0:
+            print("No signals loaded to change color.")
+            return
+        
+        # Create a dialog to choose the signal
+        if GraphNum == 1:
+            #This return the Selected Signal and if the signal is selected or not
+            signalSelector, isPressed = QInputDialog.getItem(
+                self,
+                "Select Signal",
+                "Choose the signal to change its color:",
+                self.graph_1_files,  # Combine signals from both graphs
+                0,
+                False
+            )
+            if isPressed and signalSelector:
+                # get the index of the signal that the user choose
+                signalIndex = (self.graph_1_files).index(signalSelector)
+                if signalIndex < len(self.graph_1_files):
+                    # Open a color picker dialog
+                    newColor = QColorDialog.getColor()
+                    if newColor.isValid():
+                        self.updateSignalColor(1, signalIndex, newColor)
+            else:
+                print("Invalid color selected.")
+       
+        else:
+            # This return the Selected Signal and if the signal is selected or not
+            signalSelector, isPressed = QInputDialog.getItem(
+                self,
+                "Select Signal",
+                "Choose the signal to change its color:",
+                self.graph_2_files,  # Combine signals from both graphs
+                0,
+                False
+            )
+            if isPressed and signalSelector:
+                # get the index of the signal that the user choose
+                signalIndex = (self.graph_2_files).index(signalSelector)
+                if signalIndex < len(self.graph_2_files):
+                    # Open a color picker dialog
+                    newColor = QColorDialog.getColor()
+                    if newColor.isValid():
+                        self.updateSignalColor(2, signalIndex, newColor)
+            else:
+                print("Invalid color selected.")
+
+    
+    def updateSignalColor(self, graphNum, signalIndex, newColor):
+        if graphNum == 1:
+            # Update color for the selected signal in graph 1
+            self.graph1_colors[signalIndex] = newColor
+        else:
+            # Update color for the selected signal in graph 2
+            self.graph2_colors[signalIndex] = newColor
 
 
+    
 
 
 def main():
