@@ -1,6 +1,6 @@
 import numpy as np
 from PyQt5 import QtCore, QtWidgets
-from PyQt5.QtWidgets import QMainWindow, QSlider, QLabel, QGroupBox, QVBoxLayout, QGridLayout
+from PyQt5.QtWidgets import QMainWindow, QSlider, QLabel, QGroupBox, QVBoxLayout, QGridLayout, QSpinBox, QComboBox
 import pyqtgraph as pg
 
 
@@ -14,8 +14,11 @@ class Ui_GlueMenu(QMainWindow):
         # Pass the loaded signal data
         self.signal_data1 = signal_data1
         self.signal_data2 = signal_data2
-        self.signal_data1 = self.signal_data1[:, 1]
-        self.signal_data2 = self.signal_data2[:, 1]
+        try:
+            self.signal_data1 = self.signal_data1[:, 1]
+            self.signal_data2 = self.signal_data2[:, 1]
+        except:
+            pass
         self.setupUi()
 
         # Store initial offset values
@@ -25,7 +28,6 @@ class Ui_GlueMenu(QMainWindow):
         self.end1 = len(self.signal_data1)
         self.start2 = 0
         self.end2 = len(self.signal_data2)
-        self.x_scale = 1.0  # Initial scale factor for the x-axis
 
         # Connect glue button to action
         self.glueButton.clicked.connect(self.glue_signals)
@@ -37,9 +39,16 @@ class Ui_GlueMenu(QMainWindow):
         # Create a layout
         main_layout = QVBoxLayout(self.centralwidget)
 
-        # Create a plot widget
-        self.graphWidget = pg.PlotWidget(self.centralwidget)
-        main_layout.addWidget(self.graphWidget)
+        # Create a plot widget for the original signals
+        self.graphWidget1 = pg.PlotWidget(self.centralwidget)
+        main_layout.addWidget(self.graphWidget1, stretch=3)
+
+        self.graphWidget2 = pg.PlotWidget(self.centralwidget)
+        main_layout.addWidget(self.graphWidget2, stretch=3)
+
+        # Create a plot widget for the glued signal
+        self.graphWidget_glued = pg.PlotWidget(self.centralwidget)
+        main_layout.addWidget(self.graphWidget_glued, stretch=3)
 
         # Glue button
         self.glueButton = QtWidgets.QPushButton("Glue Signals", self.centralwidget)
@@ -119,27 +128,38 @@ class Ui_GlueMenu(QMainWindow):
 
         main_layout.addWidget(group_box2)
 
-        # Add a slider for controlling the x-axis scale
-        self.xScaleSlider = QSlider(QtCore.Qt.Horizontal)
-        self.xScaleSlider.setMinimum(1)
-        self.xScaleSlider.setMaximum(30)  # Maximum zoom level
-        self.xScaleSlider.setValue(10)  # Initial value represents 1.0 scale (10 divided by 10)
-        self.xScaleSlider.setTickInterval(1)
-        self.xScaleSlider.setTickPosition(QSlider.TicksBelow)
-        main_layout.addWidget(self.xScaleSlider)
+        # Group box for Glue Parameters
+        group_box_glue = QGroupBox("Glue Parameters")
+        layout_glue = QGridLayout()
+        group_box_glue.setLayout(layout_glue)
 
-        # Label for scale
-        self.xScaleLabel = QLabel("X-Axis Scale: 1.0x", self)
-        main_layout.addWidget(self.xScaleLabel)
+        # Gap/Overlap
+        self.gap_label = QLabel("Gap/Overlap:")
+        layout_glue.addWidget(self.gap_label, 0, 0)
+        self.gap_spinbox = QSpinBox()
+        self.gap_spinbox.setMinimum(-1000)
+        self.gap_spinbox.setMaximum(1000)
+        self.gap_spinbox.setValue(0)
+        layout_glue.addWidget(self.gap_spinbox, 0, 1)
 
-        # Connect the sliders to update the graph positions
+        # Interpolation Order
+        self.interp_label = QLabel("Interpolation Order:")
+        layout_glue.addWidget(self.interp_label, 1, 0)
+        self.interp_combobox = QComboBox()
+        self.interp_combobox.addItems(["0", "1", "2", "3"])
+        layout_glue.addWidget(self.interp_combobox, 1, 1)
+
+        main_layout.addWidget(group_box_glue)
+
+        # Connect the sliders to update the graph positions and perform glue
         self.slider1.valueChanged.connect(self.update_graph_positions)
         self.slider2.valueChanged.connect(self.update_graph_positions)
         self.start_slider1.valueChanged.connect(self.update_graph_positions)
         self.end_slider1.valueChanged.connect(self.update_graph_positions)
         self.start_slider2.valueChanged.connect(self.update_graph_positions)
         self.end_slider2.valueChanged.connect(self.update_graph_positions)
-        self.xScaleSlider.valueChanged.connect(self.update_x_scale)
+        self.gap_spinbox.valueChanged.connect(self.perform_glue)
+        self.interp_combobox.currentIndexChanged.connect(self.perform_glue)
 
     def glue_signals(self):
         # Ensure signals exist
@@ -152,26 +172,29 @@ class Ui_GlueMenu(QMainWindow):
         self.time_2 = np.linspace(0, len(self.signal_data2), len(self.signal_data2), endpoint=False)
 
         # Clear previous plots
-        self.graphWidget.clear()
+        self.graphWidget1.clear()
+        self.graphWidget2.clear()
+        self.graphWidget_glued.clear()
 
         # Plot both signals
-        self.plot1 = self.graphWidget.plot(self.time_1, self.signal_data1, pen='r', name="Signal 1")
-        self.plot2 = self.graphWidget.plot(self.time_2, self.signal_data2, pen='b', name="Signal 2")
+        self.plot1 = self.graphWidget1.plot(self.time_1, self.signal_data1, pen='r', name="Signal 1")
+        self.plot2 = self.graphWidget2.plot(self.time_2, self.signal_data2, pen='b', name="Signal 2")
 
         # Set an initial x-range suitable for the view
         initial_x_range = 1000  # Adjust this value as needed
-        self.graphWidget.setXRange(0, initial_x_range, padding=0)
+        self.graphWidget1.setXRange(0, initial_x_range, padding=0)
+        self.graphWidget2.setXRange(0, initial_x_range, padding=0)
 
         # Enable panning
-        self.graphWidget.setMouseEnabled(x=True, y=False)
+        self.graphWidget1.setMouseEnabled(x=True, y=False)
+        self.graphWidget2.setMouseEnabled(x=True, y=False)
 
         # Reset sliders to zero after plotting
         self.slider1.setValue(0)
         self.slider2.setValue(0)
 
-        # Reset x-axis scale
-        self.xScaleSlider.setValue(10)  # Resets scale to 1.0
-        self.update_x_scale()  # Update positions based on the new scale
+        # Perform the glue operation
+        self.perform_glue()
 
     def update_graph_positions(self):
         """ Update the position of the graphs based on the slider values. """
@@ -189,31 +212,51 @@ class Ui_GlueMenu(QMainWindow):
         self.slider1_label.setText(f"Signal 1 Offset: {offset1}")
         self.slider2_label.setText(f"Signal 2 Offset: {offset2}")
 
-        # Apply scaling to the time axes by adjusting based on x_scale
-        time_1_shifted = (self.time_1[self.start1:self.end1] + offset1) * self.x_scale
-        time_2_shifted = (self.time_2[self.start2:self.end2] + offset2) * self.x_scale
+        # Apply the offsets and slice the signals
+        time_1_shifted = self.time_1[self.start1:self.end1] + offset1
+        time_2_shifted = self.time_2[self.start2:self.end2] + offset2
+
+        # Update the data of the plots
+        self.plot1.setData(time_1_shifted, self.signal_data1[self.start1:self.end1])
+        self.plot2.setData(time_2_shifted, self.signal_data2[self.start2:self.end2])
+
+        # Perform the glue operation
+        self.perform_glue()
+
+    def perform_glue(self):
+        """ Perform the glue operation using interpolation. """
+        # Clear the previous glued signal plot
+        self.graphWidget_glued.clear()
+
+        # Get the current offset values from the sliders
+        offset1 = self.slider1.value()
+        offset2 = self.slider2.value()
+
+        # Get the current start and end values from the sliders
+        start1 = self.start_slider1.value()
+        end1 = self.end_slider1.value()
+        start2 = self.start_slider2.value()
+        end2 = self.end_slider2.value()
+
+        # Get the gap/overlap value
+        gap = self.gap_spinbox.value()
+
+        # Get the interpolation order
+        interp_order = int(self.interp_combobox.currentText())
+
+        # Apply the offsets and slice the signals
+        time_1_shifted = self.time_1[start1:end1] + offset1
+        time_2_shifted = self.time_2[start2:end2] + offset2 + gap
 
         # Interpolate to handle conflicts and gaps
         combined_time = np.union1d(time_1_shifted, time_2_shifted)
-        signal1_interpolated = np.interp(combined_time, time_1_shifted, self.signal_data1[self.start1:self.end1])
-        signal2_interpolated = np.interp(combined_time, time_2_shifted, self.signal_data2[self.start2:self.end2])
+        signal1_interpolated = np.interp(combined_time, time_1_shifted, self.signal_data1[start1:end1])
+        signal2_interpolated = np.interp(combined_time, time_2_shifted, self.signal_data2[start2:end2])
 
         # Resolve conflicts by averaging the signals where they overlap
         combined_signal = np.where(np.isnan(signal1_interpolated), signal2_interpolated,
                                    np.where(np.isnan(signal2_interpolated), signal1_interpolated,
                                             (signal1_interpolated + signal2_interpolated) / 2))
 
-        # Update the data of the plots
-        self.plot1.setData(combined_time, signal1_interpolated)
-        self.plot2.setData(combined_time, signal2_interpolated)
-
-    def update_x_scale(self):
-        """ Update the x-axis scale based on the slider. """
-        # Get the scale factor from the slider (divide by 10 to get a floating point scale)
-        self.x_scale = self.xScaleSlider.value() / 10.0
-
-        # Update the label to reflect the current scale
-        self.xScaleLabel.setText(f"X-Axis Scale: {self.x_scale:.1f}x")
-
-        # Update the graph positions to apply the new scale
-        self.update_graph_positions()
+        # Plot the glued signal
+        self.graphWidget_glued.plot(combined_time, combined_signal, pen='g', name="Glued Signal")
