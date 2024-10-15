@@ -16,9 +16,31 @@ class GluedSignalPopup(QDialog):
         self.graphWidget_glued = pg.PlotWidget(self)
         layout.addWidget(self.graphWidget_glued)
 
+        # Add sliders for panning control
+        self.slider_label = QLabel("Pan:")
+        layout.addWidget(self.slider_label)
+        self.slider = QSlider(QtCore.Qt.Horizontal)
+        self.slider.setMinimum(0)
+        self.slider.setMaximum(100)
+        self.slider.setValue(50)
+        self.slider.setTickInterval(1)
+        layout.addWidget(self.slider)
+
+        # Connect slider to pan control method
+        self.slider.valueChanged.connect(self.update_pan)
+
     def plot_glued_signal(self, time, signal):
         self.graphWidget_glued.clear()
         self.graphWidget_glued.plot(time, signal, pen='g')
+        self.time = time
+        self.signal = signal
+        self.update_pan(self.slider.value())
+
+    def update_pan(self, value):
+        """ Update the view range based on the slider value. """
+        range_width = 1000  # Adjust this value as needed
+        center = (value / 100) * (self.time[-1] - self.time[0]) + self.time[0]
+        self.graphWidget_glued.setXRange(center - range_width / 2, center + range_width / 2, padding=0)
 
 
 class Ui_GlueMenu(QMainWindow):
