@@ -1,7 +1,11 @@
 # button_functions.py
 from PyQt5.QtWidgets import QColorDialog
 import numpy as np
-
+from reportlab.lib.pagesizes import A4
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image, Table, TableStyle
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib import colors
+import datetime
 
 def increase_speed(UI_MainWindow, isLinked, graphNum):
     if isLinked:
@@ -84,6 +88,7 @@ def stop_simulation(UI_MainWindow, isLinked, graphNum):
             if  UI_MainWindow.timer_graph_2.isActive():
                 print("graph2 timer is active")
                 UI_MainWindow.timer_graph_2.stop()
+                adjust_graph_2_slider_max(UI_MainWindow)
 
 
 def rewind(UI_MainWindow, isLinked , graphNum):
@@ -189,8 +194,8 @@ def change_color(UI_MainWindow, isLinked ,graphNum):
 
 def graph_1_h_slider_changed(self, value):
     """Handles changes in the horizontal slider to move the graph window horizontally."""
-    if self.signal_data1 is not None:
-        total_length = len(self.signal_data1)  # Get the signal length
+    if self.loadSignalData(self.graph_1_files[-1]) is not None:
+        total_length = len(self.loadSignalData(self.graph_1_files[-1]))  # Get the signal length
         window_size = 100  # Visible window size
         
         # Adjust if the window size is greater than total length
@@ -214,8 +219,8 @@ def graph_1_h_slider_changed(self, value):
 
 def graph_2_h_slider_changed(self, value):
     """Handles changes in the horizontal slider to move the graph window horizontally."""
-    if self.signal_data2 is not None:
-        total_length = len(self.signal_data2)  # Get the signal length
+    if self.loadSignalData(self.graph_2_files[-1]) is not None:
+        total_length = len(self.loadSignalData(self.graph_2_files[-1]))  # Get the signal length
         window_size = 100  # Visible window size
         
         # Adjust if the window size is greater than total length
@@ -240,13 +245,13 @@ def graph_2_h_slider_changed(self, value):
 
 def graph_1_v_slider_changed(self, value):
     """Handles changes in the vertical slider to move the graph window vertically."""
-    if self.signal_data1 is not None:
+    if self.loadSignalData(self.graph_1_files[-1]) is not None:
         # Get the current y-values of the signal (y-axis range)
         current_y_min, current_y_max = self.graph1.viewRange()[1]
         
         # Get the total range of the y-axis based on the signal data
-        data_min = np.min(self.signal_data1)
-        data_max = np.max(self.signal_data1)
+        data_min = np.min(self.loadSignalData(self.graph_1_files[-1]))
+        data_max = np.max(self.loadSignalData(self.graph_1_files[-1]))
 
         print(data_max)
         print(data_min)
@@ -273,13 +278,13 @@ def graph_1_v_slider_changed(self, value):
 
 def graph_2_v_slider_changed(self, value):
     """Handles changes in the vertical slider to move the graph window vertically."""
-    if self.signal_data2 is not None:
+    if self.loadSignalData(self.graph_2_files[-1]) is not None:
         # Get the current y-values of the signal (y-axis range)
         current_y_min, current_y_max = self.graph2.viewRange()[1]
         
         # Get the total range of the y-axis based on the signal data
-        data_min = np.min(self.signal_data2)
-        data_max = np.max(self.signal_data2)
+        data_min = np.min(self.loadSignalData(self.graph_2_files[-1]))
+        data_max = np.max(self.loadSignalData(self.graph_2_files[-1]))
 
         print(data_max)
         print(data_min)
@@ -304,8 +309,8 @@ def graph_2_v_slider_changed(self, value):
         self.graph2.setYRange(new_y_min, new_y_max, padding=0)
 
 def adjust_graph_1_slider_max(self):
-    if self.signal_data1 is not None:
-        total_length = len(self.signal_data1)  # Get the length of the signal
+    if self.loadSignalData(self.graph_1_files[-1]) is not None:
+        total_length = len(self.loadSignalData(self.graph_1_files[-1]))  # Get the length of the signal
         window_size = 100  # The size of the visible window (you can adjust this)
 
         # Calculate the maximum slider value based on the total signal length
@@ -319,14 +324,17 @@ def adjust_graph_1_slider_max(self):
 
 def adjust_graph_2_slider_max(self):
     """Adjusts the maximum value of the graph 2 horizontal slider based on signal length."""
-    if self.signal_data2 is not None:
-        total_length = len(self.signal_data2[0])  # Assuming signal_data2 is 2D
-        window_size = 100  # Adjust as needed
+    if self.loadSignalData(self.graph_2_files[-1]) is not None:
+        total_length = len(self.loadSignalData(self.graph_2_files[-1]))  # Get the length of the signal
+        window_size = 100  # The size of the visible window (you can adjust this)
+
+        # Calculate the maximum slider value based on the total signal length
         max_slider_value = max(0, total_length - window_size)
-        
-        # Set the slider maximum dynamically and print it for debugging
+    
+        # Set the maximum value for the horizontal slider
         self.graph_2_H_slider.setMaximum(max_slider_value)
-        print(f"Graph 2 Max Slider Value Set to: {max_slider_value}")
+    
+        print(f"Graph 2 Slider Max Value Set to: {max_slider_value}")
 
 
 def setup_graph_widget(graph_widget):
@@ -339,3 +347,100 @@ def update_graph_data(graph_widget, x_data, y_data, pen='r'):
     """ Update the graph widget with new data. """
     graph_widget.clear()
     graph_widget.plot(x_data, y_data, pen=pen)
+
+
+def capture_signal_screenshot(graph_widget):
+    """Capture a screenshot of the signal plot and save it as an image."""
+    img_path = f"signal_screenshot_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.png"
+    
+    # Grab the widget's content
+    screenshot = graph_widget.grab()
+    
+    # Save the screenshot to a file
+    screenshot.save(img_path, "PNG")
+    
+    return img_path
+
+
+
+
+
+def export_to_pdf(UI_MainWindow, isLinked, graphNum):
+    # Create a PDF document
+    report_name = f"Signal_Report_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.pdf"
+    pdf = SimpleDocTemplate(report_name, pagesize=A4)
+
+    elements = []
+
+    title = Paragraph(f"<b>Signal Report</b>", getSampleStyleSheet()['Title'])
+    elements.append(title)
+    elements.append(Spacer(1, 12))
+
+    if isLinked:
+        elements.append(Paragraph(f"<b>Linked Graphs Report</b>", getSampleStyleSheet()['Heading2']))
+        elements.append(Paragraph(f"<b>Graph 1 Signal Report</b>", getSampleStyleSheet()['Heading2']))
+        img1_path = capture_signal_screenshot(UI_MainWindow.graph1)  # Use the correct attribute
+        elements.append(Image(img1_path, width=400, height=200))
+        elements.append(create_stats_table(UI_MainWindow.loadSignalData(UI_MainWindow.graph_1_files[-1]), "Graph 1 Signal"))
+        elements.append(Paragraph(f"<b>Graph 2 Signal Report</b>", getSampleStyleSheet()['Heading2']))
+        img2_path = capture_signal_screenshot(UI_MainWindow.graph2)  # Use the correct attribute
+        elements.append(Image(img2_path, width=400, height=200))
+        elements.append(create_stats_table(UI_MainWindow.loadSignalData(UI_MainWindow.graph_2_files[-1]), "Graph 2 Signal"))
+
+    else:
+        if graphNum == 1:
+            elements.append(Paragraph(f"<b>Graph 1 Signal Report</b>", getSampleStyleSheet()['Heading2']))
+            img1_path = capture_signal_screenshot(UI_MainWindow.graph1)  # Use the correct attribute
+            elements.append(Image(img1_path, width=400, height=200))
+            elements.append(create_stats_table(UI_MainWindow.loadSignalData(UI_MainWindow.graph_1_files[-1]), "Graph 1 Signal"))
+        else:
+            elements.append(Paragraph(f"<b>Graph 2 Signal Report</b>", getSampleStyleSheet()['Heading2']))
+            img2_path = capture_signal_screenshot(UI_MainWindow.graph2)  # Use the correct attribute
+            elements.append(Image(img2_path, width=400, height=200))
+            elements.append(create_stats_table(UI_MainWindow.loadSignalData(UI_MainWindow.graph_2_files[-1]), "Graph 2 Signal"))
+
+    elements.append(Spacer(1, 12))
+    elements.append(Paragraph(f"Generated on: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", getSampleStyleSheet()['Normal']))
+
+    pdf.build(elements)
+    print(f"Report generated: {report_name}")
+
+def create_stats_table(signal_data, graph_label):
+    """Create a table for signal statistics such as mean, std, min, max, and duration."""
+    
+    if signal_data is None:
+        return Paragraph(f"No data available for {graph_label}", getSampleStyleSheet()['Normal'])
+    
+    # Calculate statistics
+    mean_val = np.mean(signal_data)
+    std_val = np.std(signal_data)
+    min_val = np.min(signal_data)
+    max_val = np.max(signal_data)
+    duration = len(signal_data)  # Assuming each point represents a time unit
+
+    # Create a table with stats
+    data = [
+        ["Statistic", "Value"],
+        ["Mean", f"{mean_val:.2f}"],
+        ["Standard Deviation", f"{std_val:.2f}"],
+        ["Min Value", f"{min_val:.2f}"],
+        ["Max Value", f"{max_val:.2f}"],
+        ["Duration", f"{duration} points"]
+    ]
+
+
+    # Format the table
+    table = Table(data, colWidths=[250, 150])  # Set column widths to fit within the PDF layout
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),  # Header background
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),  # Header text color
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),  # Align all cells to center
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),  # Header font
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),  # Padding for header
+        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),  # Background for body
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),  # Add grid
+        ('TOPPADDING', (0, 0), (-1, -1),10),  # Add padding above the table
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 10),  # Add padding below the table
+    ]))
+
+    return table
