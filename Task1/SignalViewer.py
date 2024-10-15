@@ -16,7 +16,7 @@ import pyqtgraph as pg
 import random
 from fetchApiData import FetchApi_MainWindow
 from GlueMenu import Ui_GlueMenu
-from functions_graph import zoom_in, zoom_out, show_graph, hide_graph, increase_speed, decrease_speed, start_simulation, stop_simulation, rewind, change_color
+from functions_graph import zoom_in, zoom_out, show_graph, hide_graph, increase_speed, decrease_speed, start_simulation, stop_simulation, rewind, change_color, export_to_pdf
 from nonRectangular import PolarEcgPlot
 
 class Ui_MainWindow(QMainWindow):
@@ -53,6 +53,7 @@ class Ui_MainWindow(QMainWindow):
         self.stop_graph_1.clicked.connect(lambda: stop_simulation(self, self.linkedSignals, 1))
         self.rewind_graph1.clicked.connect(lambda: rewind(self, self.linkedSignals , 1))
         self.Change_color_1.clicked.connect(lambda: self.openColorChangeDialog(1))
+        self.export_graph1.clicked.connect(lambda: export_to_pdf(self, self.linkedSignals, 1))
 
         # Button connections for Graph 2
         self.zoom_in_graph2.clicked.connect(lambda: zoom_in(self, self.linkedSignals, 2))
@@ -66,6 +67,7 @@ class Ui_MainWindow(QMainWindow):
         self.rewind_graph2.clicked.connect(lambda: rewind(self, self.linkedSignals, 2))
         self.Change_color_2.clicked.connect(lambda: change_color(self, self.linkedSignals, 2))
         self.Change_color_2.clicked.connect(lambda: self.openColorChangeDialog(2))
+        self.export_graph2.clicked.connect(lambda: export_to_pdf(self, self.linkedSignals, 2))
 
         self.change_to_graph_1.clicked.connect(self.move_to_graph_2_to_1)
         self.change_to_graph_2.clicked.connect(self.move_to_graph_1_to_2)
@@ -74,6 +76,7 @@ class Ui_MainWindow(QMainWindow):
         self.graph_2_H_slider.valueChanged.connect(self.update_graph_positions)
         self.graph_1_V_slider.valueChanged.connect(self.update_graph_positions)
         self.graph_2_V_slider.valueChanged.connect(self.update_graph_positions)
+        
 
     def update_graph_positions(self):
         """ Update the position of the graphs based on the slider values. """
@@ -83,11 +86,23 @@ class Ui_MainWindow(QMainWindow):
         v_value1 = self.graph_1_V_slider.value()
         v_value2 = self.graph_2_V_slider.value()
 
-        # Update the x-range and y-range of the graphs based on the slider values
-        self.graph1.setXRange(h_value1, h_value1 + 10, padding=0)
-        self.graph2.setXRange(h_value2, h_value2 + 10, padding=0)
-        self.graph1.setYRange(v_value1, v_value1 + 1, padding=0)
-        self.graph2.setYRange(v_value2, v_value2 + 1, padding=0)
+        # Get the current view ranges
+        x_range1 = self.graph1.viewRange()[0]
+        y_range1 = self.graph1.viewRange()[1]
+        x_range2 = self.graph2.viewRange()[0]
+        y_range2 = self.graph2.viewRange()[1]
+
+        # Calculate the new ranges based on the slider values
+        new_x_range1 = (h_value1, h_value1 + (x_range1[1] - x_range1[0]))
+        new_y_range1 = (v_value1, v_value1 + (y_range1[1] - y_range1[0]))
+        new_x_range2 = (h_value2, h_value2 + (x_range2[1] - x_range2[0]))
+        new_y_range2 = (v_value2, v_value2 + (y_range2[1] - y_range2[0]))
+
+        # Update the x-range and y-range of the graphs based on the new ranges
+        self.graph1.setXRange(*new_x_range1, padding=0)
+        self.graph1.setYRange(*new_y_range1, padding=0)
+        self.graph2.setXRange(*new_x_range2, padding=0)
+        self.graph2.setYRange(*new_y_range2, padding=0)
 
     #moving_graphs
     def move_to_graph_1_to_2(self):
@@ -362,6 +377,12 @@ class Ui_MainWindow(QMainWindow):
         self.browse_file_1.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
         self.browse_file_1.clicked.connect(lambda : self.openSignalFile(self.graph1, 1))
 
+        #-- Graph 1 Export --#
+        self.export_graph1 = QtWidgets.QPushButton("Export", self.Graph1_Section)
+        self.export_graph1.setGeometry(QtCore.QRect(875, 360, 81, 41))  # Adjusted for better alignment and spacing
+        self.export_graph1.setStyleSheet("font-weight:bold;font-size:16px;background-color:white")
+        self.export_graph1.setObjectName("exportPDF")
+
         #-- Graph 1 Transfer --#
         self.change_to_graph_2 = QPushButton("Move to Graph 2 👇", self.Graph1_Section)
         self.change_to_graph_2.setGeometry(QtCore.QRect(1030, 320, 180, 40))
@@ -587,6 +608,12 @@ class Ui_MainWindow(QMainWindow):
         self.browse_file_2.setObjectName("browse_file_2")
         self.browse_file_2.clicked.connect(lambda: self.openSignalFile(self.graph2 , 2))
 
+        self.export_graph2 = QtWidgets.QPushButton("Export",self.Graph2_Section)
+        self.export_graph2.setGeometry(QtCore.QRect(875, 350, 81, 41))
+        self.export_graph2.setStyleSheet("font-weight:bold;font-size:16px;background-color:white")
+        self.export_graph2.setObjectName("exportPDF")
+
+        
 
         self.Change_color_2 = QtWidgets.QPushButton("Change Color",self.Graph2_Section)
         self.Change_color_2.setGeometry(QtCore.QRect(640, 350, 151, 41))
