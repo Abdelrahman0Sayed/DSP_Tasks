@@ -1,5 +1,6 @@
 from PyQt5 import QtCore, QtWidgets
 from PyQt5.QtWidgets import QMainWindow, QSlider, QLabel, QGroupBox, QVBoxLayout, QGridLayout, QSpinBox, QComboBox, QDialog, QPushButton
+from functions_graph import export_to_pdf_glued
 import pyqtgraph as pg
 import numpy as np
 
@@ -93,12 +94,20 @@ class Ui_GlueMenu(QMainWindow):
 
         # Glue button
         self.glueButton = QtWidgets.QPushButton("Glue Signals", self.centralwidget)
+        self.glueButton.setStyleSheet("font-weight:bold;font-size:16px;background-color:#4CAF50;color:white;padding:10px;border-radius:5px;")
         main_layout.addWidget(self.glueButton)
 
         # Show glued signal button
         self.showGluedSignalButton = QtWidgets.QPushButton("Show Glued Signal", self.centralwidget)
+        self.showGluedSignalButton.setStyleSheet("font-weight:bold;font-size:16px;background-color:#2196F3;color:white;padding:10px;border-radius:5px;")
         main_layout.addWidget(self.showGluedSignalButton)
         self.showGluedSignalButton.clicked.connect(self.show_glued_signal_popup)
+
+        # export pdf
+        self.exportGluedSignalButton = QtWidgets.QPushButton("Export Glued Signal", self.centralwidget)
+        self.exportGluedSignalButton.setStyleSheet("font-weight:bold;font-size:16px;background-color:#FF5722;color:white;padding:10px;border-radius:5px;")
+        main_layout.addWidget(self.exportGluedSignalButton)
+        self.exportGluedSignalButton.clicked.connect(lambda: export_to_pdf_glued(self.graphWidget_glued, self.glued_signal))
 
         # Group box for Signal 1 controls
         group_box1 = QGroupBox("Signal 1 Controls")
@@ -180,20 +189,20 @@ class Ui_GlueMenu(QMainWindow):
         group_box_glue.setLayout(layout_glue)
 
         # Gap/Overlap
-        self.gap_label = QLabel("Gap/Overlap:")
-        layout_glue.addWidget(self.gap_label, 0, 0)
-        self.gap_spinbox = QSpinBox()
-        self.gap_spinbox.setMinimum(-1000)
-        self.gap_spinbox.setMaximum(1000)
-        self.gap_spinbox.setValue(0)
-        layout_glue.addWidget(self.gap_spinbox, 0, 1)
+        # self.gap_label = QLabel("Gap/Overlap:")
+        # layout_glue.addWidget(self.gap_label, 0, 0)
+        # self.gap_spinbox = QSpinBox()
+        # self.gap_spinbox.setMinimum(-1000)
+        # self.gap_spinbox.setMaximum(1000)
+        # self.gap_spinbox.setValue(0)
+        # layout_glue.addWidget(self.gap_spinbox, 0, 1)
 
         # Interpolation Order
-        self.interp_label = QLabel("Interpolation Order:")
-        layout_glue.addWidget(self.interp_label, 1, 0)
-        self.interp_combobox = QComboBox()
-        self.interp_combobox.addItems(["0", "1", "2", "3"])
-        layout_glue.addWidget(self.interp_combobox, 1, 1)
+        # self.interp_label = QLabel("Interpolation Order:")
+        # layout_glue.addWidget(self.interp_label, 1, 0)
+        # self.interp_combobox = QComboBox()
+        # self.interp_combobox.addItems(["0", "1", "2", "3"])
+        # layout_glue.addWidget(self.interp_combobox, 1, 1)
 
         main_layout.addWidget(group_box_glue)
 
@@ -204,8 +213,8 @@ class Ui_GlueMenu(QMainWindow):
         self.end_slider1.valueChanged.connect(self.update_graph_positions)
         self.start_slider2.valueChanged.connect(self.update_graph_positions)
         self.end_slider2.valueChanged.connect(self.update_graph_positions)
-        self.gap_spinbox.valueChanged.connect(self.perform_glue)
-        self.interp_combobox.currentIndexChanged.connect(self.perform_glue)
+        #self.gap_spinbox.valueChanged.connect(self.perform_glue)
+        #self.interp_combobox.currentIndexChanged.connect(self.perform_glue)
 
     def glue_signals(self):
         # Ensure signals exist
@@ -243,6 +252,8 @@ class Ui_GlueMenu(QMainWindow):
 
         # Perform the glue operation
         self.perform_glue()
+
+
 
     def update_graph_positions(self):
         """ Update the position of the graphs based on the slider values. """
@@ -287,24 +298,22 @@ class Ui_GlueMenu(QMainWindow):
         end2 = self.end_slider2.value()
 
         # Get the gap/overlap value
-        gap = self.gap_spinbox.value()
+        #gap = self.gap_spinbox.value()
 
         # Get the interpolation order
-        interp_order = int(self.interp_combobox.currentText())
+        # interp_order = int(self.interp_combobox.currentText())
 
         # Apply the offsets and slice the signals
         time_1_shifted = self.time_1[start1:end1] + offset1
-        time_2_shifted = self.time_2[start2:end2] + offset2 + gap
+        time_2_shifted = self.time_2[start2:end2] + offset2
 
         # Interpolate to handle conflicts and gaps
         combined_time = np.union1d(time_1_shifted, time_2_shifted)
         signal1_interpolated = np.interp(combined_time, time_1_shifted, self.signal_data1[start1:end1])
         signal2_interpolated = np.interp(combined_time, time_2_shifted, self.signal_data2[start2:end2])
 
-        # Resolve conflicts by averaging the signals where they overlap
-        combined_signal = np.where(np.isnan(signal1_interpolated), signal2_interpolated,
-                                   np.where(np.isnan(signal2_interpolated), signal1_interpolated,
-                                            (signal1_interpolated + signal2_interpolated) / 2))
+        combined_signal = signal1_interpolated + signal2_interpolated
+
 
         # Plot the glued signal
         self.graphWidget_glued.plot(combined_time, combined_signal, pen='g', name="Glued Signal")
