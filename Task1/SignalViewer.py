@@ -16,7 +16,7 @@ import pyqtgraph as pg
 import random
 from fetchApiData import FetchApi_MainWindow
 from GlueMenu import Ui_GlueMenu
-from functions_graph import zoom_in, zoom_out, show_graph, hide_graph, increase_speed, decrease_speed, start_simulation, stop_simulation, rewind, change_color, export_to_pdf
+from functions_graph import zoom_in, zoom_out, show_graph, hide_graph, increase_speed, decrease_speed, start_simulation, stop_simulation, rewind, change_color, export_to_pdf, remove_signal
 from nonRectangular import PolarEcgPlot
 
 class Ui_MainWindow(QMainWindow):
@@ -76,7 +76,19 @@ class Ui_MainWindow(QMainWindow):
         self.graph_2_H_slider.valueChanged.connect(self.update_graph_positions)
         self.graph_1_V_slider.valueChanged.connect(self.update_graph_positions)
         self.graph_2_V_slider.valueChanged.connect(self.update_graph_positions)
+
+        #remove signal button will open a dialog to select the signal to remove from graph 1
+        self.remove_signal_1.clicked.connect(lambda: self.remove_signal(1))
+
+        #remove signal button will open a dialog to select the signal to remove from graph 2
+        self.remove_signal_2.clicked.connect(lambda: self.remove_signal(2))
         
+    def remove_signal(self, graph_num):
+        dialog = SignalSelectionDialogRemove(self.graph_1_files, self.graph_2_files, graph_num, self)
+        if dialog.exec_() == QDialog.Accepted:
+            selected_signal = dialog.selected_signal
+            remove_signal(self, self.linkedSignals, graph_num, selected_signal)
+
 
     def update_graph_positions(self):
         """ Update the position of the graphs based on the slider values. """
@@ -447,6 +459,15 @@ class Ui_MainWindow(QMainWindow):
         self.rewind_graph1.setStyleSheet("font-weight:bold;font-size:16px;background-color:white")
         self.rewind_graph1.setObjectName("rewind_graph1")
 
+        # remove signal button will open a dialog to select the signal to remove from graph 1
+        self.remove_signal_1 = QPushButton("Remove Signal", self.Graph1_Section)
+        self.remove_signal_1.setGeometry(QtCore.QRect(1130, 360, 131, 41))
+        self.remove_signal_1.setStyleSheet("font-weight:bold;font-size:16px;background-color:white")
+
+        
+
+
+
 
 
         #-- The Same Thing For Graph 2 --#
@@ -646,6 +667,11 @@ class Ui_MainWindow(QMainWindow):
         self.rewind_graph2.setGeometry(QtCore.QRect(250, 350, 91, 41))
         self.rewind_graph2.setStyleSheet("font-weight:bold;font-size:16px;background-color:white")
         self.rewind_graph2.setObjectName("rewind_graph2")
+
+        # remove signal button will open a dialog to select the signal to remove from graph 2
+        self.remove_signal_2 = QPushButton("Remove Signal", self.Graph2_Section)
+        self.remove_signal_2.setGeometry(QtCore.QRect(1130, 360, 131, 41))
+        self.remove_signal_2.setStyleSheet("font-weight:bold;font-size:16px;background-color:white")
         
         #-- Graph 2 Transfer --#
         self.change_to_graph_1 = QPushButton("Move to Graph 1 👆", self.Graph2_Section)
@@ -958,6 +984,50 @@ class SignalSelectionDialog(QDialog):
 
     def reject(self):
         super().reject() 
+
+class SignalSelectionDialogRemove(QDialog):
+    # take the signals from the graph and remove the selected signal 
+    def __init__(self, graph_1_files, graph_2_files, graph_num, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Select Signals")
+        self.graph_1_files = graph_1_files
+        self.graph_2_files = graph_2_files
+        self.selected_signal = None
+        self.graph_num = graph_num
+        self.setupUi()
+
+    def setupUi(self):
+        layout = QVBoxLayout(self)
+
+        # ComboBox for selecting signal from graph 1
+        self.comboBox = QComboBox(self)
+        if self.graph_num == 1:
+            self.comboBox.addItems(self.graph_1_files)
+        else:
+            self.comboBox.addItems(self.graph_2_files)
+        layout.addWidget(QLabel(f"Select Signal from Graph {self.graph_num}:"))
+        layout.addWidget(self.comboBox)
+
+        # OK and Cancel buttons
+        button_layout = QHBoxLayout()
+        self.ok_button = QPushButton("OK", self)
+        self.cancel_button = QPushButton("Cancel", self)
+        button_layout.addWidget(self.ok_button)
+        button_layout.addWidget(self.cancel_button)
+        layout.addLayout(button_layout)
+
+        # Connect buttons
+        self.ok_button.clicked.connect(self.accept)
+        self.cancel_button.clicked.connect(self.reject)
+
+    def accept(self):
+        self.selected_signal = self.comboBox.currentText()
+        super().accept()
+
+    def reject(self):
+        super().reject()
+
+
 
 
 def main():
