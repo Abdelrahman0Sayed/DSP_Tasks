@@ -53,7 +53,7 @@ class Ui_MainWindow(QMainWindow):
         self.stop_graph_1.clicked.connect(lambda: stop_simulation(self, self.linkedSignals, 1))
         self.rewind_graph1.clicked.connect(lambda: rewind(self, self.linkedSignals , 1))
         self.Change_color_1.clicked.connect(lambda: self.openColorChangeDialog(1))
-        self.export_graph1.clicked.connect(lambda: export_to_pdf(self, self.linkedSignals, 1))
+        #self.export_graph1.clicked.connect(lambda: export_to_pdf(self, self.linkedSignals, 1))
 
         # Button connections for Graph 2
         self.zoom_in_graph2.clicked.connect(lambda: zoom_in(self, self.linkedSignals, 2))
@@ -67,7 +67,7 @@ class Ui_MainWindow(QMainWindow):
         self.rewind_graph2.clicked.connect(lambda: rewind(self, self.linkedSignals, 2))
         self.Change_color_2.clicked.connect(lambda: change_color(self, self.linkedSignals, 2))
         self.Change_color_2.clicked.connect(lambda: self.openColorChangeDialog(2))
-        self.export_graph2.clicked.connect(lambda: export_to_pdf(self, self.linkedSignals, 2))
+        #self.export_graph2.clicked.connect(lambda: export_to_pdf(self, self.linkedSignals, 2))
 
         self.change_to_graph_1.clicked.connect(self.move_to_graph_2_to_1)
         self.change_to_graph_2.clicked.connect(self.move_to_graph_1_to_2)
@@ -129,12 +129,12 @@ class Ui_MainWindow(QMainWindow):
 
             # Plot new data for graph 1 if available
             if len(self.graph_1_files) > 0:
-                graph1Data = self.loadSignalData(self.graph_1_files[-1])  # Load new data for graph 1
+                graph1Data = self.loadSignalData(self.graph_1_files[-1], 1)  # Load new data for graph 1
                 self.signalPlotting(self.graph1, graph1Data, 1)  # Plot the new data on graph 1
 
             # Load and plot data for graph 2 (the one just moved)
             if len(self.graph_2_files) > 0:
-                graph2Data = self.loadSignalData(self.graph_2_files[-1])  # Load data for graph 2
+                graph2Data = self.loadSignalData(self.graph_2_files[-1], 2)  # Load data for graph 2
                 self.signalPlotting(self.graph2, graph2Data, 2)  # Plot the data on graph 2
         else:
             print("No Signals to Move")
@@ -153,12 +153,12 @@ class Ui_MainWindow(QMainWindow):
 
             # Plot new data for graph 2 if available
             if len(self.graph_2_files) > 0:
-                graph2Data = self.loadSignalData(self.graph_2_files[-1])  # Load new data for graph 2
+                graph2Data = self.loadSignalData(self.graph_2_files[-1],1)  # Load new data for graph 2
                 self.signalPlotting(self.graph2, graph2Data, 2)  # Plot the new data on graph 2
 
             # Load and plot data for graph 1 (the one just moved)
             if len(self.graph_1_files) > 0:
-                graph1Data = self.loadSignalData(self.graph_1_files[-1])  # Load data for graph 1
+                graph1Data = self.loadSignalData(self.graph_1_files[-1],2)  # Load data for graph 1
                 self.signalPlotting(self.graph1, graph1Data, 1)  # Plot the data on graph 1
         else:
             print("No Signals to Move")
@@ -177,10 +177,10 @@ class Ui_MainWindow(QMainWindow):
         
         # Other existing initializations
         self.setWindowTitle("Multi Channel Signal Viewer")
-        self.resize(1290, 909)
-        self.setStyleSheet("Background-color:#F0F0F0;")
+        self.setFixedSize(1300, 1000)
+        self.setStyleSheet("Background-color:#e3e3e3;")
         self.linkedSignals = False
-
+        
         self.timer_graph_1 = QTimer(self)  # Used primarily for cine mode
         self.time_index_graph_1 = 0  # For Cine Mode Scrolling
 
@@ -209,8 +209,8 @@ class Ui_MainWindow(QMainWindow):
 
     def glue_signals(self, signal_1, signal_2):
         # Load the selected signals
-        signal_data1 = self.loadSignalData(signal_1)
-        signal_data2 = self.loadSignalData(signal_2)
+        signal_data1 = self.loadSignalData(signal_1, 1)
+        signal_data2 = self.loadSignalData(signal_2, 2)
 
         # Show the glue menu with the selected signals
         self.signalGlue = Ui_GlueMenu(None, signal_data1, signal_data2)
@@ -218,17 +218,26 @@ class Ui_MainWindow(QMainWindow):
     
 
     def setupUiElements(self):
-        
+        startIcon =QtGui.QIcon("images/play.png")
+        stopIcon = QtGui.QIcon("images/pause.png")
+        rewindIcon = QtGui.QIcon("images/rewind.png")
+        showIcon = QtGui.QIcon("images/show.png")
+        hideIcon = QtGui.QIcon("images/hide.png")
+        zoomInIcon = QtGui.QIcon("images/zoom_in.png")
+        zoomOutIcon = QtGui.QIcon("images/zoom_out.png")
+        binIcon = QtGui.QIcon("images/bin.png")
+
         # Create the central widget -> Wich Will Contain All our layout.
         self.centralwidget = QtWidgets.QWidget(self)
         self.centralwidget.setObjectName("centralwidget")
         
         ##### Graph 1 Section ####
         self.Graph1_Section = QtWidgets.QWidget(self.centralwidget)
-        self.Graph1_Section.setGeometry(QtCore.QRect(0, 10, 1281, 421))
+        self.Graph1_Section.setGeometry(QtCore.QRect(0, 10, 1281, 510))
         self.Graph1_Section.setObjectName("Graph1_Section")
+
         self.Graph1 = QtWidgets.QWidget(self.Graph1_Section)
-        self.Graph1.setGeometry(QtCore.QRect(59, 29, 861, 271))
+        self.Graph1.setGeometry(QtCore.QRect(40, 35, 1200, 330))
         self.Graph1.setObjectName("Graph1")
         graph_1_layout = QHBoxLayout(self.Graph1)
         self.graph1 = pg.PlotWidget(title="Graph 1 Signals")
@@ -236,7 +245,7 @@ class Ui_MainWindow(QMainWindow):
         
         #-- Graph 1 Horizontal Slider --#
         self.graph_1_H_slider = QSlider(self.Graph1_Section)
-        self.graph_1_H_slider.setGeometry(QtCore.QRect(60, 310, 871, 22))
+        self.graph_1_H_slider.setGeometry(QtCore.QRect(40, 350, 1200, 30))
         self.graph_1_H_slider.setOrientation(QtCore.Qt.Horizontal)
         self.graph_1_H_slider.setObjectName("graph_1_H_slider")
         self.graph_1_H_slider.setMinimum(0)
@@ -247,454 +256,360 @@ class Ui_MainWindow(QMainWindow):
 
         #-- Graph 1 Vertical Slider --#
         self.graph_1_V_slider = QSlider(self.Graph1_Section)
-        self.graph_1_V_slider.setGeometry(QtCore.QRect(940, 30, 22, 271))
+        self.graph_1_V_slider.setGeometry(QtCore.QRect(1250, 30, 30, 300))
         self.graph_1_V_slider.setOrientation(QtCore.Qt.Vertical)
         self.graph_1_V_slider.setObjectName("graph_1_V_slider")
+
         
-        #-- Graph 1 Zoom In --#
-        self.sideWidget_1 = QWidget(self.Graph1_Section)
-        self.sideWidget_1.setGeometry(QtCore.QRect(970, 20, 300, 350))
-        self.sideWidget_1.setStyleSheet("""
-        QWidget{
-            background-color: white;
-            border-radius: 10px;
-            border: 2px solid black;
-        }                          
-        """)
-        self.sideWidget_1.setObjectName("sideButtonsWidget")
-        
-        self.zoom_in_graph1 = QtWidgets.QPushButton("+" ,self.Graph1_Section)
-        self.zoom_in_graph1.setGeometry(QtCore.QRect(1005, 150, 100, 100))
+        self.zoom_in_graph1 = QtWidgets.QPushButton(self.Graph1_Section)
+        self.zoom_in_graph1.setIcon(zoomInIcon)
+        self.zoom_in_graph1.setIconSize(QtCore.QSize(32,40))
+        self.zoom_in_graph1.setGeometry(QtCore.QRect(1005, 0, 40, 40))
         self.zoom_in_graph1.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
         self.zoom_in_graph1.setStyleSheet("""
             QPushButton {
-                background-color: #DBDBDB;
+                background-color: white;
                 border: 2px solid black;
                 border-radius: 50px;
                 font-size: 40px;
                 font-weight: bold;
                 padding: 10px;
-            }
-
-            QPushButton::hover {
-                background-color: white;
-                border: 2px solid #000000;
-                border-radius: 50px;
-                box-shadow: inset 3px 3px 5px rgba(0, 0, 0, 0.5); /* Simulate an inset shadow */
-            }
-
-            QPushButton::pressed {
-                background-color: darkgray;
-                border: 2px solid #000000;
-                border-radius: 50px;
-                box-shadow: inset 3px 3px 8px rgba(0, 0, 0, 0.8); /* Stronger inset shadow when pressed */
             }
         """)
         self.zoom_in_graph1.setObjectName("zoom_in_graph1")
         
         #-- Graph 1 Zoom Out --#
-        self.zoom_out_graph1 = QtWidgets.QPushButton("-", self.Graph1_Section)
-        self.zoom_out_graph1.setGeometry(QtCore.QRect(1135, 150, 100, 100))
+        self.zoom_out_graph1 = QtWidgets.QPushButton(self.Graph1_Section)
+        self.zoom_out_graph1.setIcon(zoomOutIcon)
+        self.zoom_out_graph1.setIconSize(QtCore.QSize(32,40))
+        self.zoom_out_graph1.setGeometry(QtCore.QRect(1050, 0, 40, 40))
         self.zoom_out_graph1.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
         self.zoom_out_graph1.setStyleSheet("""
             QPushButton {
-                background-color: #DBDBDB;
+                background-color: white;
                 border: 2px solid black;
-                border-radius: 50px;
                 font-size: 40px;
                 font-weight: bold;
                 padding: 10px;
-            }
-
-            QPushButton::hover {
-                background-color: white;
-                border: 2px solid #000000;
-                border-radius: 50px;
-                box-shadow: inset 3px 3px 5px rgba(0, 0, 0, 0.5); /* Simulate an inset shadow */
-            }
-
-            QPushButton::pressed {
-                background-color: darkgray;
-                border: 2px solid #000000;
-                border-radius: 50px;
-                box-shadow: inset 3px 3px 8px rgba(0, 0, 0, 0.8); /* Stronger inset shadow when pressed */
             }
         """)
         self.zoom_out_graph1.setObjectName("zoom_out_graph1")
         
         #-- Graph 1 Show/Hide --#
-        self.show_graph_1 = QtWidgets.QPushButton("Show", self.Graph1_Section)
-        self.show_graph_1.setGeometry(QtCore.QRect(1000, 50, 111, 51))
+        self.show_graph_1 = QtWidgets.QPushButton(self.Graph1_Section)
+        self.show_graph_1.setIcon(showIcon)
+        self.show_graph_1.setIconSize(QtCore.QSize(32,40))
+        self.show_graph_1.setGeometry(QtCore.QRect(1140, 0, 40, 40))
         self.show_graph_1.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
         self.show_graph_1.setStyleSheet("""
             QPushButton {
-                background-color: #DBDBDB;
+                background-color: white;
                 border: 1px solid black;
-                border-radius: 10px;
-                font-size: 16px;
+                font-size: 10px;
                 font-weight: bold;
                 padding: 10px;
-            }
-
-            QPushButton::hover {
-                background-color: white;
-                border: 2px solid #000000;
-                border-radius: 50px;
-                box-shadow: inset 3px 3px 5px rgba(0, 0, 0, 0.5); /* Simulate an inset shadow */
-            }
-
-            QPushButton::pressed {
-                background-color: darkgray;
-                border: 2px solid #000000;
-                border-radius: 50px;
-                box-shadow: inset 3px 3px 8px rgba(0, 0, 0, 0.8); /* Stronger inset shadow when pressed */
             }
         """)
         self.show_graph_1.setObjectName("show_graph_1")
         
-        self.hide_graph_1 = QtWidgets.QPushButton("Hide" , self.Graph1_Section)
-        self.hide_graph_1.setGeometry(QtCore.QRect(1130, 50, 111, 51))
+        self.hide_graph_1 = QtWidgets.QPushButton( self.Graph1_Section)
+        self.hide_graph_1.setIcon(hideIcon)
+        self.hide_graph_1.setIconSize(QtCore.QSize(32,40))
+        self.hide_graph_1.setGeometry(QtCore.QRect(1190, 0, 40, 40))
         self.hide_graph_1.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
         self.hide_graph_1.setStyleSheet("""
             QPushButton {
-                background-color: #DBDBDB;
+                background-color: white;
                 border: 1px solid black;
-                border-radius: 10px;
                 font-size: 16px;
                 font-weight: bold;
                 padding: 10px;
             }
 
-            QPushButton::hover {
-                background-color: white;
-                border: 2px solid #000000;
-                border-radius: 50px;
-                box-shadow: inset 3px 3px 5px rgba(0, 0, 0, 0.5); /* Simulate an inset shadow */
-            }
-
-            QPushButton::pressed {
-                background-color: darkgray;
-                border: 2px solid #000000;
-                border-radius: 50px;
-                box-shadow: inset 3px 3px 8px rgba(0, 0, 0, 0.8); /* Stronger inset shadow when pressed */
-            }
         """)
         self.hide_graph_1.setObjectName("hide_graph_1")
         
         #-- Graph 1 Browse File --#
         self.browse_file_1 = QtWidgets.QPushButton("Browse File" , self.Graph1_Section)
-        self.browse_file_1.setGeometry(QtCore.QRect(800, 360, 131, 41))
-        self.browse_file_1.setStyleSheet("font-weight:bold;font-size:16px;background-color:white")
+        self.browse_file_1.setGeometry(QtCore.QRect(880, 390, 131, 41))
+        self.browse_file_1.setStyleSheet("font-weight:bold;font-size:16px;background-color:white;border:2px solid black;border-radius:10px;")
         self.browse_file_1.setObjectName("browse_file_1")
         self.browse_file_1.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
         self.browse_file_1.clicked.connect(lambda : self.openSignalFile(self.graph1, 1))
 
-        #-- Graph 1 Export --#
-        self.export_graph1 = QtWidgets.QPushButton("Export", self.Graph1_Section)
-        self.export_graph1.setGeometry(QtCore.QRect(875, 360, 81, 41))  # Adjusted for better alignment and spacing
-        self.export_graph1.setStyleSheet("font-weight:bold;font-size:16px;background-color:white")
-        self.export_graph1.setObjectName("exportPDF")
 
         #-- Graph 1 Transfer --#
-        self.change_to_graph_2 = QPushButton("Move to Graph 2 👇", self.Graph1_Section)
-        self.change_to_graph_2.setGeometry(QtCore.QRect(1030, 320, 180, 40))
+        self.change_to_graph_2 = QPushButton("Move to Graph 2", self.Graph1_Section)
+        self.change_to_graph_2.setGeometry(QtCore.QRect(1100, 390, 180, 40))
         self.change_to_graph_2.setStyleSheet("""
             QPushButton {
                 background-color: white;
                 border: 2px solid black;
-                border-radius: 10px;
                 font-size: 14px;
                 font-weight: bold;
                 padding: 10px;
-            }
-
-            QPushButton::hover {
-                border-radius:10px;
-                background-color: #DBDBDB;
-                border: 2px solid black;
-                box-shadow: inset 3px 3px 5px rgba(0, 0, 0, 0.5); /* Simulate an inset shadow */
             }
         """)
         self.change_to_graph_2.setObjectName("move_to_graph_2")
         self.change_to_graph_2.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
+        # Create and set the shadow effect
+        shadow_effect = QtWidgets.QGraphicsDropShadowEffect()
+        shadow_effect.setBlurRadius(5)  # Adjust the blur radius
+        shadow_effect.setXOffset(2)       # Horizontal offset of the shadow
+        shadow_effect.setYOffset(2)       # Vertical offset of the shadow
+        shadow_effect.setColor(QtGui.QColor(0, 0, 0))  # Shadow color
+        self.change_to_graph_2.setGraphicsEffect(shadow_effect)
 
         #-- Graph 1 Change Color --#
         self.Change_color_1 = QtWidgets.QPushButton("Change Color", self.Graph1_Section)
-        self.Change_color_1.setGeometry(QtCore.QRect(640, 360, 151, 41))
-        self.Change_color_1.setStyleSheet("font-weight:bold;font-size:16px;background-color:white")
+        self.Change_color_1.setGeometry(QtCore.QRect(720, 390, 151, 41))
+        self.Change_color_1.setStyleSheet("font-weight:bold;font-size:16px;background-color:white;border:2px solid black;border-radius:10px;")
         self.Change_color_1.setObjectName("Change_color_1")
         
         #-- Graph 1 High Speed --#
         self.high_speed_1 = QtWidgets.QPushButton("Speed (+)", self.Graph1_Section)
-        self.high_speed_1.setGeometry(QtCore.QRect(380, 360, 111, 41))
-        self.high_speed_1.setStyleSheet("font-weight:bold;font-size:16px;background-color:white")
+        self.high_speed_1.setGeometry(QtCore.QRect(480, 390, 111, 41))
+        self.high_speed_1.setStyleSheet("font-weight:bold;font-size:16px;background-color:white;border:2px solid black;border-radius:10px;")
         self.high_speed_1.setObjectName("high_speed_1")
-        self.high_speed_1.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
+        self.high_speed_1.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))        
+
         
         #-- Graph 1 Slow Speed --#
         self.slow_speed_1 = QtWidgets.QPushButton( "Speed (-)", self.Graph1_Section)
-        self.slow_speed_1.setGeometry(QtCore.QRect(500, 360, 111, 41))
-        self.slow_speed_1.setStyleSheet("font-weight:bold;font-size:16px;background-color:white")
+        self.slow_speed_1.setGeometry(QtCore.QRect(600, 390, 111, 41))
+        self.slow_speed_1.setStyleSheet("font-weight:bold;font-size:16px;background-color:white;border:2px solid black;border-radius:10px;")
         self.slow_speed_1.setObjectName("slow_speed_1")
         self.slow_speed_1.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
-        
+
+
         #-- Graph 1 Stop Simulating --#
-        self.stop_graph_1 = QtWidgets.QPushButton("Pause", self.Graph1_Section)
+        self.stop_graph_1 = QtWidgets.QPushButton(self.Graph1_Section)
         self.stop_graph_1.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
-        self.stop_graph_1.setStyleSheet("font-weight:bold;font-size:16px;background-color:white")
+        self.stop_graph_1.setStyleSheet("font-weight:bold;font-size:16px;background-color:white;border:2px solid black;border-radius:10px;")
         self.stop_graph_1.setObjectName("start_graph_1")
         self.stop_graph_1.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
-        self.stop_graph_1.setGeometry(QtCore.QRect(150, 360, 91, 41))
+        self.stop_graph_1.setGeometry(QtCore.QRect(150, 390, 91, 41))
+        self.stop_graph_1.setIcon(stopIcon)
+        self.stop_graph_1.setIconSize(QtCore.QSize(32,32))
+
 
         #-- Graph 1 Start Simulating --#
-        self.start_graph_1 = QtWidgets.QPushButton("Start", self.Graph1_Section)
-        self.start_graph_1.setGeometry(QtCore.QRect(60, 360, 81, 41))
+        
+        self.start_graph_1 = QtWidgets.QPushButton( self.Graph1_Section)
+        self.start_graph_1.setGeometry(QtCore.QRect(60, 390, 81, 41))
         self.start_graph_1.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
-        self.start_graph_1.setStyleSheet("font-weight:bold;font-size:16px;background-color:white")
+        self.start_graph_1.setStyleSheet("font-weight:bold;font-size:16px;background-color:white;border:2px solid black;border-radius:10px;")
         self.start_graph_1.setObjectName("start_graph_1")
         self.start_graph_1.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
+        self.start_graph_1.setIcon(startIcon)
+        self.start_graph_1.setIconSize(QtCore.QSize(32, 32))
+
         #-- Graph 1 Rewind --#
-        self.rewind_graph1 = QtWidgets.QPushButton("Rewind",self.Graph1_Section)
-        self.rewind_graph1.setGeometry(QtCore.QRect(250, 360, 91, 41))
-        self.rewind_graph1.setStyleSheet("font-weight:bold;font-size:16px;background-color:white")
+        self.rewind_graph1 = QtWidgets.QPushButton(self.Graph1_Section)
+        self.rewind_graph1.setGeometry(QtCore.QRect(250, 390, 91, 41))
+        self.rewind_graph1.setStyleSheet("font-weight:bold;font-size:16px;background-color:white;border:2px solid black;border-radius:10px;")
         self.rewind_graph1.setObjectName("rewind_graph1")
+        self.rewind_graph1.setIcon(rewindIcon)
+        self.rewind_graph1.setIconSize(QtCore.QSize(32,32))
 
         # remove signal button will open a dialog to select the signal to remove from graph 1
-        self.remove_signal_1 = QPushButton("Remove Signal", self.Graph1_Section)
-        self.remove_signal_1.setGeometry(QtCore.QRect(1130, 360, 131, 41))
-        self.remove_signal_1.setStyleSheet("font-weight:bold;font-size:16px;background-color:white")
+        self.remove_signal_1 = QPushButton(self.Graph1_Section)
+        self.remove_signal_1.setGeometry(QtCore.QRect(350, 390, 81, 41))
+        self.remove_signal_1.setStyleSheet("font-weight:bold;font-size:16px;background-color:white;border:2px solid black;border-radius:10px;")
+        self.remove_signal_1.setIcon(binIcon)
+        self.remove_signal_1.setIconSize(QtCore.QSize(32,32))
 
-        
-
-
-
+        ##### Separator Line #####
+        self.separator = QtWidgets.QFrame(self.Graph1_Section)
+        self.separator.setGeometry(QtCore.QRect(0, 470, 1350, 10))  # Adjust Y position as needed
+        self.separator.setFrameShape(QtWidgets.QFrame.HLine)  # Horizontal line
+        self.separator.setFrameShadow(QtWidgets.QFrame.Sunken)  # Make it appear sunken
+        self.separator.setStyleSheet("""
+            QFrame{
+                color: black;
+                border: 20px solid black;
+            }
+        """)  # Optional: change color if needed
 
 
         #-- The Same Thing For Graph 2 --#
         self.Graph2_Section = QtWidgets.QWidget(self.centralwidget)
-        self.Graph2_Section.setGeometry(QtCore.QRect(0, 440, 1281, 421))
+        self.Graph2_Section.setGeometry(QtCore.QRect(0, 520, 1281, 510))  # Match Graph 1 size and position
         self.Graph2_Section.setObjectName("Graph2_Section")
+        
+
         self.Graph2 = QWidget(self.Graph2_Section)
-        self.Graph2.setGeometry(QtCore.QRect(59, 29, 861, 261))
-        self.Graph2.setObjectName("Graph1_2")
-        graph_2_layout = QVBoxLayout(self.Graph2)
+        self.Graph2.setGeometry(QtCore.QRect(40, 35, 1200, 330))  # Match Graph 1 geometry
+        self.Graph2.setObjectName("Graph2")
+        graph_2_layout = QHBoxLayout(self.Graph2)  # Use QHBoxLayout to match Graph 1
         self.graph2 = pg.PlotWidget(title="Graph 2 Signals")
         graph_2_layout.addWidget(self.graph2)
 
+        # Horizontal Slider for Graph 2
         self.graph_2_H_slider = QSlider(self.Graph2_Section)
-        self.graph_2_H_slider.setGeometry(QtCore.QRect(60, 300, 871, 22))
+        self.graph_2_H_slider.setGeometry(QtCore.QRect(40, 350, 1200, 30))  # Match Graph 1 slider geometry
         self.graph_2_H_slider.setOrientation(QtCore.Qt.Horizontal)
-        self.graph_2_H_slider.setObjectName("graph_1_H_slider_2")
-        
-        self.graph_2_V_slider = QtWidgets.QSlider(self.Graph2_Section)
-        self.graph_2_V_slider.setGeometry(QtCore.QRect(940, 30, 22, 251))
+        self.graph_2_H_slider.setObjectName("graph_2_H_slider")
+        self.graph_2_H_slider.setMinimum(0)
+        self.graph_2_H_slider.setMaximum(5000)  # Adjust as needed
+        self.graph_2_H_slider.setValue(0)
+        self.graph_2_H_slider.setTickInterval(1)
+
+        # Vertical Slider for Graph 2
+        self.graph_2_V_slider = QSlider(self.Graph2_Section)
+        self.graph_2_V_slider.setGeometry(QtCore.QRect(1250, 30, 30, 300))  # Match Graph 1 vertical slider
         self.graph_2_V_slider.setOrientation(QtCore.Qt.Vertical)
-        self.graph_2_V_slider.setObjectName("graph_1_V_slider_2")
-        
-        self.sideWidget_2 = QWidget(self.Graph2_Section)
-        self.sideWidget_2.setGeometry(QtCore.QRect(970, 20, 300, 350))
-        self.sideWidget_2.setStyleSheet("""
-        QWidget{
-            background-color: white;
-            border-radius: 10px;
-            border: 2px solid black;
-        }                          
-        """)
-        self.sideWidget_2.setObjectName("sideButtonsWidget2")
-        
-        self.zoom_in_graph2 = QtWidgets.QPushButton("+",self.Graph2_Section)
-        self.zoom_in_graph2.setGeometry(QtCore.QRect(1000, 150, 100, 100))
+        self.graph_2_V_slider.setObjectName("graph_2_V_slider")
+
+        # Zoom In for Graph 2
+        self.zoom_in_graph2 = QtWidgets.QPushButton(self.Graph2_Section)
+        self.zoom_in_graph2.setIcon(zoomInIcon)
+        self.zoom_in_graph2.setIconSize(QtCore.QSize(32, 40))
+        self.zoom_in_graph2.setGeometry(QtCore.QRect(1005, 0, 40, 40))  # Match Graph 1 button position
         self.zoom_in_graph2.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
-        self.zoom_in_graph2.setStyleSheet("")
-        self.zoom_in_graph2.setObjectName("zoom_in_graph2")
         self.zoom_in_graph2.setStyleSheet("""
             QPushButton {
-                background-color: #DBDBDB;
+                background-color: white;
                 border: 2px solid black;
                 border-radius: 50px;
                 font-size: 40px;
                 font-weight: bold;
                 padding: 10px;
             }
-
-            QPushButton::hover {
-                background-color: white;
-                border: 2px solid #000000;
-                border-radius: 50px;
-                box-shadow: inset 3px 3px 5px rgba(0, 0, 0, 0.5); /* Simulate an inset shadow */
-            }
-
-            QPushButton::pressed {
-                background-color: darkgray;
-                border: 2px solid #000000;
-                border-radius: 50px;
-                box-shadow: inset 3px 3px 8px rgba(0, 0, 0, 0.8); /* Stronger inset shadow when pressed */
-            }
         """)
+        self.zoom_in_graph2.setObjectName("zoom_in_graph2")
 
-
-        self.zoom_out_graph2 = QtWidgets.QPushButton("-",self.Graph2_Section)
-        self.zoom_out_graph2.setGeometry(QtCore.QRect(1130, 150, 100, 100))
+        # Zoom Out for Graph 2
+        self.zoom_out_graph2 = QtWidgets.QPushButton(self.Graph2_Section)
+        self.zoom_out_graph2.setIcon(zoomOutIcon)
+        self.zoom_out_graph2.setIconSize(QtCore.QSize(32, 40))
+        self.zoom_out_graph2.setGeometry(QtCore.QRect(1050, 0, 40, 40))  # Match Graph 1 button position
         self.zoom_out_graph2.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
-        self.zoom_out_graph2.setStyleSheet("")
-        self.zoom_out_graph2.setObjectName("zoom_out_graph2")
         self.zoom_out_graph2.setStyleSheet("""
             QPushButton {
-                background-color: #DBDBDB;
+                background-color: white;
                 border: 2px solid black;
-                border-radius: 50px;
                 font-size: 40px;
                 font-weight: bold;
                 padding: 10px;
             }
-
-            QPushButton::hover {
-                background-color: white;
-                border: 2px solid #000000;
-                border-radius: 50px;
-                box-shadow: inset 3px 3px 5px rgba(0, 0, 0, 0.5); /* Simulate an inset shadow */
-            }
-
-            QPushButton::pressed {
-                background-color: darkgray;
-                border: 2px solid #000000;
-                border-radius: 50px;
-                box-shadow: inset 3px 3px 8px rgba(0, 0, 0, 0.8); /* Stronger inset shadow when pressed */
-            }
         """)
+        self.zoom_out_graph2.setObjectName("zoom_out_graph2")
 
-        
-        self.show_graph_2 = QtWidgets.QPushButton("Show",self.Graph2_Section)
-        self.show_graph_2.setGeometry(QtCore.QRect(1000, 50, 111, 51))
+        # Show/Hide Buttons for Graph 2
+        self.show_graph_2 = QtWidgets.QPushButton(self.Graph2_Section)
+        self.show_graph_2.setIcon(showIcon)
+        self.show_graph_2.setIconSize(QtCore.QSize(32, 40))
+        self.show_graph_2.setGeometry(QtCore.QRect(1140, 0, 40, 40))  # Match Graph 1 button position
         self.show_graph_2.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
         self.show_graph_2.setStyleSheet("""
             QPushButton {
-                background-color: #DBDBDB;
+                background-color: white;
                 border: 1px solid black;
-                border-radius: 10px;
-                font-size: 16px;
+                font-size: 10px;
                 font-weight: bold;
                 padding: 10px;
-            }
-
-            QPushButton::hover {
-                background-color: white;
-                border: 2px solid #000000;
-                border-radius: 50px;
-                box-shadow: inset 3px 3px 5px rgba(0, 0, 0, 0.5); /* Simulate an inset shadow */
-            }
-
-            QPushButton::pressed {
-                background-color: darkgray;
-                border: 2px solid #000000;
-                border-radius: 50px;
-                box-shadow: inset 3px 3px 8px rgba(0, 0, 0, 0.8); /* Stronger inset shadow when pressed */
             }
         """)
         self.show_graph_2.setObjectName("show_graph_2")
 
-        
-        self.hide_graph_2 = QtWidgets.QPushButton("Hide",self.Graph2_Section)
-        self.hide_graph_2.setGeometry(QtCore.QRect(1130, 50, 111, 51))
+
+        self.hide_graph_2 = QtWidgets.QPushButton(self.Graph2_Section)
+        self.hide_graph_2.setIcon(hideIcon)
+        self.hide_graph_2.setIconSize(QtCore.QSize(32, 40))
+        self.hide_graph_2.setGeometry(QtCore.QRect(1190, 0, 40, 40))  # Match Graph 1 button position
         self.hide_graph_2.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
         self.hide_graph_2.setStyleSheet("""
             QPushButton {
-                background-color: #DBDBDB;
+                background-color: white;
                 border: 1px solid black;
-                border-radius: 10px;
                 font-size: 16px;
                 font-weight: bold;
                 padding: 10px;
             }
-
-            QPushButton::hover {
-                background-color: white;
-                border: 2px solid #000000;
-                border-radius: 50px;
-                box-shadow: inset 3px 3px 5px rgba(0, 0, 0, 0.5); /* Simulate an inset shadow */
-            }
-
-            QPushButton::pressed {
-                background-color: darkgray;
-                border: 2px solid #000000;
-                border-radius: 50px;
-                box-shadow: inset 3px 3px 8px rgba(0, 0, 0, 0.8); /* Stronger inset shadow when pressed */
-            }
         """)
         self.hide_graph_2.setObjectName("hide_graph_2")
-        
-        self.browse_file_2 = QPushButton("Browse File",self.Graph2_Section)
-        self.browse_file_2.setGeometry(QtCore.QRect(800, 350, 131, 41))
-        self.browse_file_2.setStyleSheet("font-weight:bold;font-size:16px;background-color:white")
+
+        # Browse File for Graph 2
+        self.browse_file_2 = QPushButton("Browse File", self.Graph2_Section)
+        self.browse_file_2.setGeometry(QtCore.QRect(880, 390, 131, 41))  # Match Graph 1 button position
+        self.browse_file_2.setStyleSheet("font-weight:bold;font-size:16px;background-color:white;border:2px solid black;border-radius:10px;")
         self.browse_file_2.setObjectName("browse_file_2")
-        self.browse_file_2.clicked.connect(lambda: self.openSignalFile(self.graph2 , 2))
+        self.browse_file_2.clicked.connect(lambda: self.openSignalFile(self.graph2, 2))
 
-        self.export_graph2 = QtWidgets.QPushButton("Export",self.Graph2_Section)
-        self.export_graph2.setGeometry(QtCore.QRect(875, 350, 81, 41))
-        self.export_graph2.setStyleSheet("font-weight:bold;font-size:16px;background-color:white")
-        self.export_graph2.setObjectName("exportPDF")
-
-        
-
-        self.Change_color_2 = QtWidgets.QPushButton("Change Color",self.Graph2_Section)
-        self.Change_color_2.setGeometry(QtCore.QRect(640, 350, 151, 41))
-        self.Change_color_2.setStyleSheet("font-weight:bold;font-size:16px;background-color:white")
+        # Change Color for Graph 2
+        self.Change_color_2 = QtWidgets.QPushButton("Change Color", self.Graph2_Section)
+        self.Change_color_2.setGeometry(QtCore.QRect(720, 390, 151, 41))  # Match Graph 1 button position
+        self.Change_color_2.setStyleSheet("font-weight:bold;font-size:16px;background-color:white;border:2px solid black;border-radius:10px;")
         self.Change_color_2.setObjectName("Change_color_2")
-        
-        
-        self.high_speed_2 = QtWidgets.QPushButton("Speed (+)",self.Graph2_Section)
-        self.high_speed_2.setGeometry(QtCore.QRect(380, 350, 111, 41))
-        self.high_speed_2.setStyleSheet("font-weight:bold;font-size:16px;background-color:white")
+
+        # High Speed for Graph 2
+        self.high_speed_2 = QtWidgets.QPushButton("Speed (+)", self.Graph2_Section)
+        self.high_speed_2.setGeometry(QtCore.QRect(480, 390, 111, 41))  # Match Graph 1 button position
+        self.high_speed_2.setStyleSheet("font-weight:bold;font-size:16px;background-color:white;border:2px solid black;border-radius:10px;")
         self.high_speed_2.setObjectName("high_speed_2")
 
-        self.slow_speed_2 = QtWidgets.QPushButton("Speed (-)",self.Graph2_Section)
-        self.slow_speed_2.setGeometry(QtCore.QRect(500, 350, 111, 41))
-        self.slow_speed_2.setStyleSheet("font-weight:bold;font-size:16px;background-color:white")
+        # Slow Speed for Graph 2
+        self.slow_speed_2 = QtWidgets.QPushButton("Speed (-)", self.Graph2_Section)
+        self.slow_speed_2.setGeometry(QtCore.QRect(600, 390, 111, 41))  # Match Graph 1 button position
+        self.slow_speed_2.setStyleSheet("font-weight:bold;font-size:16px;background-color:white;border:2px solid black;border-radius:10px;")
         self.slow_speed_2.setObjectName("slow_speed_2")
-        
-        self.stop_graph_2 = QtWidgets.QPushButton("Pause",self.Graph2_Section)
-        self.stop_graph_2.setGeometry(QtCore.QRect(150, 350, 91, 41))
-        self.stop_graph_2.setStyleSheet("font-weight:bold;font-size:16px;background-color:white")
-        self.stop_graph_2.setObjectName("stop_graph_2")
-        
-        self.start_graph_2 = QtWidgets.QPushButton("Start",self.Graph2_Section)
-        self.start_graph_2.setGeometry(QtCore.QRect(60, 350, 81, 41))
-        self.start_graph_2.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
-        self.start_graph_2.setStyleSheet("font-weight:bold;font-size:16px;background-color:white")
-        self.start_graph_2.setObjectName("start_graph_2")
-        
-        self.rewind_graph2 = QtWidgets.QPushButton("Rewind" , self.Graph2_Section)
-        self.rewind_graph2.setGeometry(QtCore.QRect(250, 350, 91, 41))
-        self.rewind_graph2.setStyleSheet("font-weight:bold;font-size:16px;background-color:white")
-        self.rewind_graph2.setObjectName("rewind_graph2")
 
-        # remove signal button will open a dialog to select the signal to remove from graph 2
-        self.remove_signal_2 = QPushButton("Remove Signal", self.Graph2_Section)
-        self.remove_signal_2.setGeometry(QtCore.QRect(1130, 360, 131, 41))
-        self.remove_signal_2.setStyleSheet("font-weight:bold;font-size:16px;background-color:white")
-        
-        #-- Graph 2 Transfer --#
-        self.change_to_graph_1 = QPushButton("Move to Graph 1 👆", self.Graph2_Section)
-        self.change_to_graph_1.setGeometry(QtCore.QRect(1020, 320, 180, 40))
+        # Stop Simulating for Graph 2
+        self.stop_graph_2 = QtWidgets.QPushButton(self.Graph2_Section)
+        self.stop_graph_2.setGeometry(QtCore.QRect(150, 390, 91, 41))  # Match Graph 1 button position
+        self.stop_graph_2.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
+        self.stop_graph_2.setStyleSheet("font-weight:bold;font-size:16px;background-color:white;border:2px solid black;border-radius:10px;")
+        self.stop_graph_2.setObjectName("stop_graph_2")
+        self.stop_graph_2.setIcon(stopIcon)
+        self.stop_graph_2.setIconSize(QtCore.QSize(32, 32))
+
+        # Start Simulating for Graph 2
+        self.start_graph_2 = QtWidgets.QPushButton(self.Graph2_Section)
+        self.start_graph_2.setGeometry(QtCore.QRect(60, 390, 81, 41))  # Match Graph 1 button position
+        self.start_graph_2.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
+        self.start_graph_2.setStyleSheet("font-weight:bold;font-size:16px;background-color:white;border:2px solid black;border-radius:10px;")
+        self.start_graph_2.setObjectName("start_graph_2")
+        self.start_graph_2.setIcon(startIcon)
+        self.start_graph_2.setIconSize(QtCore.QSize(32, 32))
+
+        # Rewind for Graph 2
+        self.rewind_graph2 = QtWidgets.QPushButton(self.Graph2_Section)
+        self.rewind_graph2.setGeometry(QtCore.QRect(250, 390, 91, 41))  # Match Graph 1 button position
+        self.rewind_graph2.setStyleSheet("font-weight:bold;font-size:16px;background-color:white;border:2px solid black;border-radius:10px;")
+        self.rewind_graph2.setObjectName("rewind_graph2")
+        self.rewind_graph2.setIcon(rewindIcon)
+        self.rewind_graph2.setIconSize(QtCore.QSize(32, 32))
+
+        # Remove Signal for Graph 2
+        self.remove_signal_2 = QPushButton(self.Graph2_Section)
+        self.remove_signal_2.setGeometry(QtCore.QRect(350, 390, 81, 41))  # Match Graph 1 button position
+        self.remove_signal_2.setStyleSheet("font-weight:bold;font-size:16px;background-color:white;border:2px solid black;border-radius:10px;")
+        self.remove_signal_2.setIcon(binIcon)
+        self.remove_signal_2.setIconSize(QtCore.QSize(32, 32))
+        self.remove_signal_2.setObjectName("remove_signal_2")
+
+                #-- Graph 1 Transfer --#
+        self.change_to_graph_1 = QPushButton("Move to Graph 1", self.Graph2_Section)
+        self.change_to_graph_1.setGeometry(QtCore.QRect(1100, 390, 180, 40))
         self.change_to_graph_1.setStyleSheet("""
             QPushButton {
                 background-color: white;
                 border: 2px solid black;
-                border-radius: 10px;
                 font-size: 14px;
                 font-weight: bold;
                 padding: 10px;
             }
-
-            QPushButton::hover {
-                border-radius:10px;
-                background-color: #DBDBDB;
-                border: 2px solid black;
-                box-shadow: inset 3px 3px 5px rgba(0, 0, 0, 0.5); /* Simulate an inset shadow */
-            }
         """)
-        self.change_to_graph_1.setObjectName("move_to_graph_2")
-        self.change_to_graph_1.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
+        # Create and set the shadow effect
+        shadow_effect = QtWidgets.QGraphicsDropShadowEffect()
+        shadow_effect.setBlurRadius(5)  # Adjust the blur radius
+        shadow_effect.setXOffset(2)       # Horizontal offset of the shadow
+        shadow_effect.setYOffset(2)       # Vertical offset of the shadow
+        shadow_effect.setColor(QtGui.QColor(0, 0, 0))  # Shadow color
+        self.change_to_graph_1.setGraphicsEffect(shadow_effect)
+
+
 
         # Menu Bar for more features.
         # For each menubar we need actions ? -> To Add Action while clicking on it (make sense)
@@ -765,7 +680,7 @@ class Ui_MainWindow(QMainWindow):
                         self.graph1_colors.append(self.get_random_color())  # Assign a random color for the signal
                     
                     self.timer_graph_1.stop()
-                    signalData = self.loadSignalData(file_path)
+                    signalData = self.loadSignalData(file_path,1)
                     self.signalPlotting(self.graph1, signalData, 1)  # Plot the new data on graph 1
 
                 else:
@@ -776,7 +691,7 @@ class Ui_MainWindow(QMainWindow):
                         self.graph2_colors.append(self.get_random_color())  # Assign a random color for the signal
                     
                     self.timer_graph_2.stop()
-                    signalData = self.loadSignalData(file_path)
+                    signalData = self.loadSignalData(file_path,2)
                     self.signalPlotting(self.graph2, signalData, 2)  # Plot the new data on graph 2
 
                 if signalData is None:
@@ -786,7 +701,7 @@ class Ui_MainWindow(QMainWindow):
             except Exception as e:
                 print(f"Couldn't open signal file: {str(e)}")
 
-    def loadSignalData(self, file_path):
+    def loadSignalData(self, file_path, graphNum):
         try:
             # Load the Signal file.
             signalData = np.loadtxt(file_path, delimiter=',')
@@ -796,6 +711,10 @@ class Ui_MainWindow(QMainWindow):
                 print(f"File at {file_path} contains no data.")
                 return None
 
+            if graphNum == 1:
+                self.graph1.setLimits(xMin=0, xMax=len(signalData), yMin=min(signalData), yMax=max(signalData))
+            else:
+                self.graph2.setLimits(xMin=0, xMax=len(signalData), yMin=min(signalData), yMax=max(signalData))
             
             return signalData
         except ValueError as ve:
@@ -845,7 +764,7 @@ class Ui_MainWindow(QMainWindow):
             else:
                 Graph.setXRange(0, self.windowSize)
 
-            self.time_index_linked_graphs += 10
+            self.time_index_linked_graphs += 5
             if self.time_index_linked_graphs >= len(signalData):
                 self.timer_linked_graphs.stop()
                 self.timer_graph_1.stop()
@@ -855,7 +774,7 @@ class Ui_MainWindow(QMainWindow):
             if GraphNum == 1:
                 Graph.clear()
                 for i, file in enumerate(self.graph_1_files):
-                    signal = self.loadSignalData(file)
+                    signal = self.loadSignalData(file, 1)
                     Graph.plot(signal[:self.time_index_graph_1 + 1], pen=self.graph1_colors[i])
 
                 if self.time_index_graph_1 > self.windowSize:
@@ -863,13 +782,13 @@ class Ui_MainWindow(QMainWindow):
                 else:
                     Graph.setXRange(0, self.windowSize)
 
-                self.time_index_graph_1 += 10
+                self.time_index_graph_1 += 5
                 if self.time_index_graph_1 >= len(signalData):
                     self.timer_graph_1.stop()
             else:
                 Graph.clear()
                 for i, file in enumerate(self.graph_2_files):
-                    signal = self.loadSignalData(file)
+                    signal = self.loadSignalData(file, 2)
                     Graph.plot(signal[:self.time_index_graph_2 + 1], pen=self.graph2_colors[i])
 
                 if self.time_index_graph_2 > self.windowSize:
@@ -877,7 +796,7 @@ class Ui_MainWindow(QMainWindow):
                 else:
                     Graph.setXRange(0, self.windowSize)
 
-                self.time_index_graph_2 += 10
+                self.time_index_graph_2 += 5
                 if self.time_index_graph_2 >= len(signalData):
                     self.timer_graph_2.stop() 
 
