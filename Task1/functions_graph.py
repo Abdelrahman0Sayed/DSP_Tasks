@@ -405,6 +405,27 @@ def export_to_pdf(UI_MainWindow, isLinked, graphNum):
     pdf.build(elements)
     print(f"Report generated: {report_name}")
 
+def export_to_pdf_glued(glued_graph, glued_data):
+    # Create a PDF document
+    report_name = f"Signal_Report_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.pdf"
+    pdf = SimpleDocTemplate(report_name, pagesize=A4)
+
+    elements = []
+
+    title = Paragraph(f"<b>Signal Report</b>", getSampleStyleSheet()['Title'])
+    elements.append(title)
+    elements.append(Spacer(1, 12))
+    elements.append(Paragraph(f"<b>Graph 1 Signal Report</b>", getSampleStyleSheet()['Heading2']))
+    img1_path = capture_signal_screenshot(glued_graph)  # Use the correct attribute
+    elements.append(Image(img1_path, width=400, height=200))
+    elements.append(create_stats_table(glued_data, "Graph 1 Signal"))
+
+    elements.append(Spacer(1, 12))
+    elements.append(Paragraph(f"Generated on: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", getSampleStyleSheet()['Normal']))
+
+    pdf.build(elements)
+    print(f"Report generated: {report_name}")
+
 def create_stats_table(signal_data, graph_label):
     """Create a table for signal statistics such as mean, std, min, max, and duration."""
     
@@ -444,3 +465,50 @@ def create_stats_table(signal_data, graph_label):
     ]))
 
     return table
+
+
+# Define the function to remove a signal from the graph
+def remove_signal(UI_MainWindow, isLinked, graphNum, signal_identifier):
+    """
+    Remove a signal from the specified graph.
+    
+    Parameters:
+    - UI_MainWindow: The main window object containing the graphs.
+    - isLinked: Boolean indicating if the graphs are linked.
+    - graphNum: The graph number (1 or 2) if not linked.
+    - signal_identifier: The identifier for the signal to be removed.
+    """
+    if isLinked:
+        # Remove signal from both linked graphs
+        remove_signal_from_graph(UI_MainWindow.graph1, signal_identifier, UI_MainWindow.graph_1_files)
+        remove_signal_from_graph(UI_MainWindow.graph2, signal_identifier, UI_MainWindow.graph_1_files)
+    else:
+        if graphNum == 1:
+            remove_signal_from_graph(UI_MainWindow.graph1, signal_identifier, UI_MainWindow.graph_1_files)
+        else:
+            remove_signal_from_graph(UI_MainWindow.graph2, signal_identifier, UI_MainWindow.graph_2_files)
+
+def remove_signal_from_graph(graph, signal_identifier, graph_files):
+    """
+    Remove a signal from a specific graph.
+    
+    Parameters:
+    - graph: The graph object from which to remove the signal.
+    - signal_identifier: The identifier for the signal to be removed.
+    """
+    # Assuming signals are stored in a list within the graph object
+    signals = graph.listDataItems()
+    print(signals)
+    for i , signal in enumerate(signals):
+        # read the signal object in readable format
+
+        print(signal_identifier)
+        if graph_files[i] == signal_identifier:
+            graph.removeItem(signal)
+            print(f"Signal '{signal_identifier}' removed from the graph.")
+            break
+    else:
+        print(f"Signal '{signal_identifier}' not found in the graph.")
+
+# Example usage:
+# remove_signal(UI_MainWindow, isLinked=True, graphNum=1, signal_identifier="Signal 1")
