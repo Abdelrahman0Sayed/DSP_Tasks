@@ -33,8 +33,9 @@ class Ui_MainWindow(QMainWindow):
         print("Start Non Rectangular Coordinates")
         if self.ecg_plot_window is None:  # Create the window only if it doesn't exist
             self.ecg_plot_window = PolarEcgPlot()
-            self.ecg_plot_window.LoadEcgGraph1Signals(self.graph_1_files, self.graph1_colors)
-            self.ecg_plot_window.LoadEcgGraph2Signals(self.graph_2_files, self.graph2_colors)
+            all_signals = self.graph_1_files + self.graph_2_files
+            all_colors = self.graph1_colors = self.graph2_colors
+            self.ecg_plot_window.LoadEcgSignals(all_signals, all_colors)
             self.ecg_plot_window.show()
         else:
             self.ecg_plot_window.raise_()  # Bring to front if already exists
@@ -174,7 +175,7 @@ class Ui_MainWindow(QMainWindow):
         self.graph_2_files = []  # Store file paths for Graph 2 signals
         self.graph1_colors = []  # Store colors for each signal in Graph 1
         self.graph2_colors = []  # Store colors for each signal in Graph 2
-        
+        self.linked_graphs_color = self.get_random_color()
         # Other existing initializations
         self.setWindowTitle("Multi Channel Signal Viewer")
         self.setFixedSize(1300, 1000)

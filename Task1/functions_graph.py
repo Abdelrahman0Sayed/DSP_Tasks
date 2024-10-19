@@ -309,8 +309,8 @@ def graph_2_v_slider_changed(self, value):
         self.graph2.setYRange(new_y_min, new_y_max, padding=0)
 
 def adjust_graph_1_slider_max(self):
-    if self.loadSignalData(self.graph_1_files[-1]) is not None:
-        total_length = len(self.loadSignalData(self.graph_1_files[-1]))  # Get the length of the signal
+    if self.loadSignalData(self.graph_1_files[-1], 1) is not None:
+        total_length = len(self.loadSignalData(self.graph_1_files[-1], 1))  # Get the length of the signal
         window_size = 100  # The size of the visible window (you can adjust this)
 
         # Calculate the maximum slider value based on the total signal length
@@ -324,8 +324,8 @@ def adjust_graph_1_slider_max(self):
 
 def adjust_graph_2_slider_max(self):
     """Adjusts the maximum value of the graph 2 horizontal slider based on signal length."""
-    if self.loadSignalData(self.graph_2_files[-1]) is not None:
-        total_length = len(self.loadSignalData(self.graph_2_files[-1]))  # Get the length of the signal
+    if self.loadSignalData(self.graph_2_files[-1], 2) is not None:
+        total_length = len(self.loadSignalData(self.graph_2_files[-1], 2))  # Get the length of the signal
         window_size = 100  # The size of the visible window (you can adjust this)
 
         # Calculate the maximum slider value based on the total signal length
