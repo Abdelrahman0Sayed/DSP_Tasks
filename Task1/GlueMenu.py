@@ -1,55 +1,17 @@
-from PyQt5 import QtCore, QtWidgets
-from PyQt5.QtWidgets import QMainWindow, QSlider, QLabel, QGroupBox, QVBoxLayout, QGridLayout, QSpinBox, QComboBox, QDialog, QPushButton
+from PyQt5.QtCore import Qt, QTimer  # used for alignments.
+from PyQt5.QtWidgets import QMainWindow, QSlider, QLabel, QGroupBox, QVBoxLayout, QGridLayout, QSpinBox, QComboBox, QPushButton
 from functions_graph import export_to_pdf_glued
 import pyqtgraph as pg
+from PyQt5 import QtCore, QtGui, QtWidgets
 import numpy as np
-
-
-class GluedSignalPopup(QDialog):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setWindowTitle("Glued Signal")
-        self.resize(800, 600)
-        self.setupUi()
-
-    def setupUi(self):
-        layout = QVBoxLayout(self)
-        self.graphWidget_glued = pg.PlotWidget(self)
-        layout.addWidget(self.graphWidget_glued)
-
-        # Add sliders for panning control
-        self.slider_label = QLabel("Pan:")
-        layout.addWidget(self.slider_label)
-        self.slider = QSlider(QtCore.Qt.Horizontal)
-        self.slider.setMinimum(0)
-        self.slider.setMaximum(100)
-        self.slider.setValue(50)
-        self.slider.setTickInterval(1)
-        layout.addWidget(self.slider)
-
-        # Connect slider to pan control method
-        self.slider.valueChanged.connect(self.update_pan)
-
-    def plot_glued_signal(self, time, signal):
-        self.graphWidget_glued.clear()
-        self.graphWidget_glued.plot(time, signal, pen='g')
-        self.time = time
-        self.signal = signal
-        self.update_pan(self.slider.value())
-
-    def update_pan(self, value):
-        """ Update the view range based on the slider value. """
-        range_width = 1000  # Adjust this value as needed
-        center = (value / 100) * (self.time[-1] - self.time[0]) + self.time[0]
-        self.graphWidget_glued.setXRange(center - range_width / 2, center + range_width / 2, padding=0)
-
+from scipy.interpolate import interp1d
 
 class Ui_GlueMenu(QMainWindow):
     def __init__(self, parent=None, signal_data1=None, signal_data2=None):
         super().__init__()
         self.setObjectName("GluMenu")
         self.setWindowTitle("Glue Menu")
-        self.resize(800, 600)
+        self.resize(1200, 800)  # Increase the window size
 
         # Pass the loaded signal data
         self.signal_data1 = signal_data1
@@ -69,45 +31,38 @@ class Ui_GlueMenu(QMainWindow):
         self.start2 = 0
         self.end2 = len(self.signal_data2)
 
+        # Timer for live updating the glued signal
+        self.timer_glued_signal = QTimer(self)
+        self.time_index_glued_signal = 0  # For Cine Mode Scrolling
+        self.update_interval = 200  # Initial update interval (ms)
+
         # Connect glue button to action
         self.glueButton.clicked.connect(self.glue_signals)
 
     def setupUi(self):
+        self.update_interval = 200  # Initial update interval (ms)
         self.centralwidget = QtWidgets.QWidget(self)
         self.setCentralWidget(self.centralwidget)
 
         # Create a layout
-        main_layout = QVBoxLayout(self.centralwidget)
+        main_layout = QGridLayout(self.centralwidget)
 
         # Create a plot widget for the original signals
         self.graphWidget1 = pg.PlotWidget(self.centralwidget)
-        main_layout.addWidget(self.graphWidget1, stretch=3)
+        main_layout.addWidget(self.graphWidget1, 0, 0, 1, 2)
+        main_layout.setRowStretch(0, 1)
+        main_layout.setColumnStretch(0, 2)
 
         self.graphWidget2 = pg.PlotWidget(self.centralwidget)
-        main_layout.addWidget(self.graphWidget2, stretch=3)
+        main_layout.addWidget(self.graphWidget2, 1, 0, 1, 2)
+        main_layout.setRowStretch(1, 1)
+        main_layout.setColumnStretch(0, 2)
 
         # Create a plot widget for the glued signal
         self.graphWidget_glued = pg.PlotWidget(self.centralwidget)
-        main_layout.addWidget(self.graphWidget_glued, stretch=3)
-        #hide the glued signal plot
-        self.graphWidget_glued.hide()
-
-        # Glue button
-        self.glueButton = QtWidgets.QPushButton("Glue Signals", self.centralwidget)
-        self.glueButton.setStyleSheet("font-weight:bold;font-size:16px;background-color:#4CAF50;color:white;padding:10px;border-radius:5px;")
-        main_layout.addWidget(self.glueButton)
-
-        # Show glued signal button
-        self.showGluedSignalButton = QtWidgets.QPushButton("Show Glued Signal", self.centralwidget)
-        self.showGluedSignalButton.setStyleSheet("font-weight:bold;font-size:16px;background-color:#2196F3;color:white;padding:10px;border-radius:5px;")
-        main_layout.addWidget(self.showGluedSignalButton)
-        self.showGluedSignalButton.clicked.connect(self.show_glued_signal_popup)
-
-        # export pdf
-        self.exportGluedSignalButton = QtWidgets.QPushButton("Export Glued Signal", self.centralwidget)
-        self.exportGluedSignalButton.setStyleSheet("font-weight:bold;font-size:16px;background-color:#FF5722;color:white;padding:10px;border-radius:5px;")
-        main_layout.addWidget(self.exportGluedSignalButton)
-        self.exportGluedSignalButton.clicked.connect(lambda: export_to_pdf_glued(self.graphWidget_glued, self.glued_signal))
+        main_layout.addWidget(self.graphWidget_glued, 2, 0, 1, 2)
+        main_layout.setRowStretch(2, 2)
+        main_layout.setColumnStretch(0, 2)
 
         # Group box for Signal 1 controls
         group_box1 = QGroupBox("Signal 1 Controls")
@@ -144,7 +99,7 @@ class Ui_GlueMenu(QMainWindow):
         self.end_slider1.setTickInterval(1)
         layout1.addWidget(self.end_slider1, 2, 1)
 
-        main_layout.addWidget(group_box1)
+        main_layout.addWidget(group_box1, 0, 2, 1, 1)
 
         # Group box for Signal 2 controls
         group_box2 = QGroupBox("Signal 2 Controls")
@@ -181,30 +136,67 @@ class Ui_GlueMenu(QMainWindow):
         self.end_slider2.setTickInterval(1)
         layout2.addWidget(self.end_slider2, 2, 1)
 
-        main_layout.addWidget(group_box2)
+        main_layout.addWidget(group_box2, 1, 2, 1, 1)
 
         # Group box for Glue Parameters
         group_box_glue = QGroupBox("Glue Parameters")
         layout_glue = QGridLayout()
         group_box_glue.setLayout(layout_glue)
 
-        # Gap/Overlap
-        # self.gap_label = QLabel("Gap/Overlap:")
-        # layout_glue.addWidget(self.gap_label, 0, 0)
-        # self.gap_spinbox = QSpinBox()
-        # self.gap_spinbox.setMinimum(-1000)
-        # self.gap_spinbox.setMaximum(1000)
-        # self.gap_spinbox.setValue(0)
-        # layout_glue.addWidget(self.gap_spinbox, 0, 1)
-
         # Interpolation Order
-        # self.interp_label = QLabel("Interpolation Order:")
-        # layout_glue.addWidget(self.interp_label, 1, 0)
-        # self.interp_combobox = QComboBox()
-        # self.interp_combobox.addItems(["0", "1", "2", "3"])
-        # layout_glue.addWidget(self.interp_combobox, 1, 1)
+        self.interp_label = QLabel("Interpolation Order:")
+        layout_glue.addWidget(self.interp_label, 0, 0)
+        self.interp_combobox = QComboBox()
+        self.interp_combobox.addItems(["0", "1", "2", "3"])
+        layout_glue.addWidget(self.interp_combobox, 0, 1)
+        self.interp_combobox.currentIndexChanged.connect(self.perform_glue)
 
-        main_layout.addWidget(group_box_glue)
+        main_layout.addWidget(group_box_glue, 2, 2, 1, 2)
+
+        # Speed controller
+        self.speed_label = QLabel("Speed:")
+        layout_glue.addWidget(self.speed_label, 1, 0)
+        self.speed_slider = QSlider(QtCore.Qt.Horizontal)
+        self.speed_slider.setMinimum(50)
+        self.speed_slider.setMaximum(1000)
+        self.speed_slider.setValue(self.update_interval)
+        self.speed_slider.setTickInterval(50)
+        layout_glue.addWidget(self.speed_slider, 1, 1)
+        self.speed_slider.valueChanged.connect(self.update_speed)
+
+        # Rewind button
+        self.rewind_button = QPushButton("Rewind", self.centralwidget)
+        layout_glue.addWidget(self.rewind_button, 2, 0, 1, 2)
+        self.rewind_button.clicked.connect(self.rewind_glued_signal)
+
+        # Horizontal slider for glued signal
+        self.glue_h_slider = QSlider(QtCore.Qt.Horizontal)
+        self.glue_h_slider.setMinimum(0)
+        self.glue_h_slider.setMaximum(1000)  # Placeholder; will update based on the signal length
+        self.glue_h_slider.setValue(0)
+        self.glue_h_slider.setTickInterval(1)
+        main_layout.addWidget(self.glue_h_slider, 3, 0, 1, 2)
+        self.glue_h_slider.valueChanged.connect(self.update_glued_signal_position)
+
+        # Vertical slider for glued signal
+        self.glue_v_slider = QSlider(QtCore.Qt.Vertical)
+        self.glue_v_slider.setMinimum(0)
+        self.glue_v_slider.setMaximum(1000)  # Placeholder; will update based on the signal length
+        self.glue_v_slider.setValue(0)
+        self.glue_v_slider.setTickInterval(1)
+        main_layout.addWidget(self.glue_v_slider, 2, 3, 1, 1)
+        self.glue_v_slider.valueChanged.connect(self.update_glued_signal_position)
+
+        # Glue button
+        self.glueButton = QtWidgets.QPushButton("Glue Signals", self.centralwidget)
+        self.glueButton.setStyleSheet("font-weight:bold;font-size:16px;background-color:#4CAF50;color:white;padding:10px;border-radius:5px;")
+        main_layout.addWidget(self.glueButton, 4, 0, 1, 2)
+
+        # Export PDF button
+        self.exportGluedSignalButton = QtWidgets.QPushButton("Export Glued Signal", self.centralwidget)
+        self.exportGluedSignalButton.setStyleSheet("font-weight:bold;font-size:16px;background-color:#FF5722;color:white;padding:10px;border-radius:5px;")
+        main_layout.addWidget(self.exportGluedSignalButton, 5, 0, 1, 2)
+        self.exportGluedSignalButton.clicked.connect(lambda: export_to_pdf_glued(self.graphWidget_glued, self.glued_signal))
 
         # Connect the sliders to update the graph positions and perform glue
         self.slider1.valueChanged.connect(self.update_graph_positions)
@@ -213,8 +205,6 @@ class Ui_GlueMenu(QMainWindow):
         self.end_slider1.valueChanged.connect(self.update_graph_positions)
         self.start_slider2.valueChanged.connect(self.update_graph_positions)
         self.end_slider2.valueChanged.connect(self.update_graph_positions)
-        #self.gap_spinbox.valueChanged.connect(self.perform_glue)
-        #self.interp_combobox.currentIndexChanged.connect(self.perform_glue)
 
     def glue_signals(self):
         # Ensure signals exist
@@ -253,8 +243,6 @@ class Ui_GlueMenu(QMainWindow):
         # Perform the glue operation
         self.perform_glue()
 
-
-
     def update_graph_positions(self):
         """ Update the position of the graphs based on the slider values. """
         # Get the current offset values from the sliders
@@ -266,6 +254,12 @@ class Ui_GlueMenu(QMainWindow):
         self.end1 = self.end_slider1.value()
         self.start2 = self.start_slider2.value()
         self.end2 = self.end_slider2.value()
+
+        # Ensure the sliders do not move outside the signal range
+        self.start1 = max(0, min(self.start1, len(self.signal_data1) - 1))
+        self.end1 = max(self.start1 + 1, min(self.end1, len(self.signal_data1)))
+        self.start2 = max(0, min(self.start2, len(self.signal_data2) - 1))
+        self.end2 = max(self.start2 + 1, min(self.end2, len(self.signal_data2)))
 
         # Update the slider labels to reflect the current offset values
         self.slider1_label.setText(f"Signal 1 Offset: {offset1}")
@@ -297,11 +291,14 @@ class Ui_GlueMenu(QMainWindow):
         start2 = self.start_slider2.value()
         end2 = self.end_slider2.value()
 
-        # Get the gap/overlap value
-        #gap = self.gap_spinbox.value()
+        # Ensure the sliders do not move outside the signal range
+        start1 = max(0, min(start1, len(self.signal_data1) - 1))
+        end1 = max(start1 + 1, min(end1, len(self.signal_data1)))
+        start2 = max(0, min(start2, len(self.signal_data2) - 1))
+        end2 = max(start2 + 1, min(end2, len(self.signal_data2)))
 
         # Get the interpolation order
-        # interp_order = int(self.interp_combobox.currentText())
+        interp_order = int(self.interp_combobox.currentText())
 
         # Apply the offsets and slice the signals
         time_1_shifted = self.time_1[start1:end1] + offset1
@@ -309,21 +306,77 @@ class Ui_GlueMenu(QMainWindow):
 
         # Interpolate to handle conflicts and gaps
         combined_time = np.union1d(time_1_shifted, time_2_shifted)
-        signal1_interpolated = np.interp(combined_time, time_1_shifted, self.signal_data1[start1:end1])
-        signal2_interpolated = np.interp(combined_time, time_2_shifted, self.signal_data2[start2:end2])
+        if interp_order == 0:
+            signal1_interpolated = np.interp(combined_time, time_1_shifted, self.signal_data1[start1:end1])
+            signal2_interpolated = np.interp(combined_time, time_2_shifted, self.signal_data2[start2:end2])
+        
+        elif interp_order == 1:
+            f1 = interp1d(time_1_shifted, self.signal_data1[start1:end1], kind='linear')
+            f2 = interp1d(time_2_shifted, self.signal_data2[start2:end2], kind='linear')
+            signal1_interpolated = f1(combined_time)
+            signal2_interpolated = f2(combined_time)
+        
+        elif interp_order == 2:
+            f1 = interp1d(time_1_shifted, self.signal_data1[start1:end1], kind='quadratic')
+            f2 = interp1d(time_2_shifted, self.signal_data2[start2:end2], kind='quadratic')
+            signal1_interpolated = f1(combined_time)
+            signal2_interpolated = f2(combined_time)
+        
+        elif interp_order == 3:
+            f1 = interp1d(time_1_shifted, self.signal_data1[start1:end1], kind='cubic')
+            f2 = interp1d(time_2_shifted, self.signal_data2[start2:end2], kind='cubic')
+            signal1_interpolated = f1(combined_time)
+            signal2_interpolated = f2(combined_time)
 
         combined_signal = signal1_interpolated + signal2_interpolated
 
-
-        # Plot the glued signal
-        self.graphWidget_glued.plot(combined_time, combined_signal, pen='g', name="Glued Signal")
-
-        # Store the glued signal data for the popup
+        # Store the glued signal data
         self.glued_time = combined_time
         self.glued_signal = combined_signal
 
-    def show_glued_signal_popup(self):
-        """ Show the glued signal in a popup window. """
-        self.popup = GluedSignalPopup(self)
-        self.popup.plot_glued_signal(self.glued_time, self.glued_signal)
-        self.popup.exec_()
+        # Update the sliders' maximum values based on the glued signal length
+        self.glue_h_slider.setMaximum(len(self.glued_signal) - 1)
+        self.glue_v_slider.setMaximum(len(self.glued_signal) - 1)
+
+        # Start the timer for live updating
+        self.time_index_glued_signal = 0
+        self.timer_glued_signal.timeout.connect(self.update_glued_signal)
+        self.timer_glued_signal.start(self.update_interval)
+
+    def update_glued_signal(self):
+        """ Update the glued signal plot incrementally. """
+        if self.glued_signal is None or len(self.glued_signal) == 0:
+            print("There's no glued signal data.")
+            return
+
+        # Plot the glued signal incrementally
+        self.graphWidget_glued.clear()
+        self.graphWidget_glued.plot(self.glued_time[:self.time_index_glued_signal + 1], self.glued_signal[:self.time_index_glued_signal + 1], pen='g')
+
+        if self.time_index_glued_signal > 200:
+            self.graphWidget_glued.setXRange(self.time_index_glued_signal - 200 + 1, self.time_index_glued_signal + 1)
+        else:
+            self.graphWidget_glued.setXRange(0, 200)
+
+        self.time_index_glued_signal += 5
+        if self.time_index_glued_signal >= len(self.glued_signal):
+            self.timer_glued_signal.stop()
+
+    def update_speed(self, value):
+        """ Update the speed of the live updating. """
+        self.update_interval = value
+        self.timer_glued_signal.setInterval(self.update_interval)
+
+    def rewind_glued_signal(self):
+        """ Rewind the glued signal to the beginning. """
+        self.time_index_glued_signal = 0
+        self.timer_glued_signal.start(self.update_interval)
+
+    def update_glued_signal_position(self):
+        """ Update the position of the glued signal based on the slider values. """
+        h_value = self.glue_h_slider.value()
+        v_value = self.glue_v_slider.value()
+
+        # Update the x-range and y-range of the glued signal based on the slider values
+        self.graphWidget_glued.setXRange(h_value, h_value + 200, padding=0)
+        self.graphWidget_glued.setYRange(v_value, v_value + 200, padding=0)
